@@ -1,0 +1,49 @@
+<svg width="1280" height="800" viewBox="0 0 1280 800" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1280" height="800" fill="#f8f9fa"/>
+
+  <!-- Left side - Animation ON (crossed out) -->
+  <g>
+    <!-- Label -->
+    <text x="320" y="120" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="600" fill="#495057">View Transitions ON</text>
+
+    <!-- Multiple overlapping rectangles showing animation -->
+    <rect x="220" y="200" width="200" height="140" rx="8" fill="#e9ecef" opacity="0.3"/>
+    <rect x="230" y="210" width="200" height="140" rx="8" fill="#dee2e6" opacity="0.5"/>
+    <rect x="240" y="220" width="200" height="140" rx="8" fill="#adb5bd" opacity="0.7"/>
+    <rect x="250" y="230" width="200" height="140" rx="8" fill="#6c757d"/>
+
+    <!-- Big red X -->
+    <line x1="180" y1="180" x2="480" y2="400" stroke="#dc3545" stroke-width="8" stroke-linecap="round"/>
+    <line x1="480" y1="180" x2="180" y2="400" stroke="#dc3545" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <!-- Arrow -->
+  <g>
+    <path d="M 560 290 L 720 290" stroke="#495057" stroke-width="4" fill="none" marker-end="url(#arrowhead)"/>
+    <defs>
+      <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <polygon points="0 0, 10 3, 0 6" fill="#495057"/>
+      </marker>
+    </defs>
+  </g>
+
+  <!-- Right side - Animation OFF (clean) -->
+  <g>
+    <!-- Label -->
+    <text x="960" y="120" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="600" fill="#495057">View Transitions OFF</text>
+
+    <!-- Single clean rectangle -->
+    <rect x="860" y="230" width="200" height="140" rx="8" fill="#6c757d"/>
+
+    <!-- Checkmark -->
+    <circle cx="960" cy="450" r="30" fill="#28a745"/>
+    <path d="M 945 450 L 955 460 L 975 440" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Extension name at bottom -->
+  <text x="640" y="620" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="48" font-weight="700" fill="#212529">Disable View Transitions</text>
+
+  <!-- Tagline -->
+  <text x="640" y="680" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" fill="#6c757d">Skip animations • Instant page transitions</text>
+</svg>
