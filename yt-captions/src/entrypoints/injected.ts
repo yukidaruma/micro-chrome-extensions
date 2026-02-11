@@ -1,10 +1,5 @@
-import { postInjected as post } from "@/messages";
-
-declare global {
-  interface XMLHttpRequest {
-    _interceptedUrl?: string;
-  }
-}
+import { postToContent } from "@/messages";
+import type { InjectedCommand } from "@/messages";
 
 type PlayerResponse = {
   captions?: {
@@ -32,13 +27,14 @@ export default defineUnlistedScript(() => {
   function checkPlayerResponse(data: PlayerResponse) {
     if (data.videoDetails?.title) {
       videoTitle = data.videoDetails.title;
-      post({ type: "VIDEO_DETAILS", videoTitle });
-    }
-
-    const tracks =
-      data.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-    if (!tracks || tracks.length === 0) {
-      post({ type: "YT_NO_CAPTIONS" });
+      const tracks =
+        data.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+      postToContent({
+        type: "VIDEO_DATA",
+        videoTitle,
+        hasCaptions: !!tracks && tracks.length > 0,
+        relayToSidePanel: true,
+      });
     }
   }
 
@@ -63,6 +59,9 @@ export default defineUnlistedScript(() => {
     {
       match: "/timedtext",
       handle(body) {
+        // Prevent prefetched captions from appearing in side panel (e.g. from search result page)
+        if (location.pathname !== "/watch") return;
+
         const root = body as TimedTextResponse;
         if (!root.events) return;
 
@@ -75,7 +74,11 @@ export default defineUnlistedScript(() => {
           .filter((c) => c.text.trim().length > 0);
 
         if (captions.length > 0) {
-          post({ type: "YT_CAPTIONS", captions, videoTitle });
+          postToContent({
+            type: "VIDEO_DATA",
+            captions,
+            relayToSidePanel: true,
+          });
         }
       },
     },
@@ -85,86 +88,68 @@ export default defineUnlistedScript(() => {
     .ytInitialPlayerResponse as PlayerResponse | undefined;
   if (_ytInitial) {
     checkPlayerResponse(_ytInitial);
+  } else {
+    Object.defineProperty(window, "ytInitialPlayerResponse", {
+      configurable: true,
+      get() {
+        return _ytInitial;
+      },
+      set(value: PlayerResponse) {
+        _ytInitial = value;
+        checkPlayerResponse(value);
+      },
+    });
   }
-  Object.defineProperty(window, "ytInitialPlayerResponse", {
-    configurable: true,
-    get() {
-      return _ytInitial;
-    },
-    set(value: PlayerResponse) {
-      _ytInitial = value;
-      checkPlayerResponse(value);
-    },
-  });
 
   // Fetch
   const originalFetch = window.fetch;
   window.fetch = async function (...args) {
     const response = await originalFetch.apply(this, args);
-    const url = args[0]?.toString() || "";
+    const url =
+      args[0] instanceof Request ? args[0].url : args[0]?.toString() || "";
+
     const interceptor = interceptors.find((i) => url.includes(i.match));
     if (interceptor) {
-      response
-        .clone()
-        .json()
-        .then((body) => interceptor.handle(body));
+      response.clone().json().then(interceptor.handle);
     }
+
     return response;
   };
 
   // XHR
-  const originalOpen = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function (
-    method: string,
-    url: string | URL,
-    async?: boolean,
-    username?: string | null,
-    password?: string | null,
-  ) {
-    this._interceptedUrl = url.toString();
-    return originalOpen.call(
-      this,
-      method,
-      url,
-      async ?? true,
-      username,
-      password,
-    );
-  };
-
   const originalSend = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.send = function (
     body?: Document | XMLHttpRequestBodyInit | null,
   ) {
-    const interceptor = interceptors.find((i) =>
-      (this._interceptedUrl || "").includes(i.match),
-    );
-    if (interceptor) {
-      this.addEventListener("load", function () {
-        try {
-          interceptor.handle(JSON.parse(this.responseText));
-        } catch {
-          interceptor.handle(this.responseText);
-        }
-      });
-    }
+    this.addEventListener("load", function () {
+      const interceptor = interceptors.find((i) =>
+        this.responseURL.includes(i.match),
+      );
+      if (!interceptor) return;
+
+      try {
+        interceptor.handle(JSON.parse(this.responseText));
+      } catch {}
+    });
 
     return originalSend.call(this, body);
   };
 
   // Listen for commands from content script
   window.addEventListener("message", (event) => {
-    const msg = event.data as
-      | { destination?: string; type?: string }
-      | undefined;
+    const msg = event.data as InjectedCommand | undefined;
     if (msg?.destination !== "injected") return;
-    if (msg.type === "TOGGLE_SUBTITLES_ON") {
-      const player = document.getElementById("movie_player") as
-        | (HTMLElement & {
-            toggleSubtitlesOn?: () => void;
-          })
-        | null;
-      player?.toggleSubtitlesOn?.();
+
+    switch (msg.type) {
+      case "TOGGLE_SUBTITLES_ON": {
+        const player = document.getElementById("movie_player") as
+          | (HTMLElement & {
+              toggleSubtitlesOn?: () => void;
+            })
+          | null;
+        player?.toggleSubtitlesOn?.();
+        break;
+      }
     }
   });
 
@@ -176,7 +161,11 @@ export default defineUnlistedScript(() => {
       if (now - lastSentTime < 100) return;
       lastSentTime = now;
       const timeMs = Math.round(video.currentTime * 1000);
-      post({ type: "VIDEO_TIME_UPDATE", timeMs });
+      postToContent({
+        type: "VIDEO_TIME_UPDATE",
+        timeMs,
+        relayToSidePanel: true,
+      });
     });
   }
 

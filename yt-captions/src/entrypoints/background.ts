@@ -1,38 +1,30 @@
-import { relayToPanel } from "@/messages";
-import type {
-  ContentMessage,
-  GetCaptionsResponse,
-  PanelRequest,
-  TabCommand,
-} from "@/messages";
+import { postToPanel } from "@/messages";
+import type { GetCaptionsResponse, PanelMessage, TabCommand } from "@/messages";
 
 export default defineBackground(() => {
   browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
-  browser.tabs.onActivated.addListener(({ tabId }) => {
-    relayToPanel({ type: "TAB_ACTIVATED", tabId });
+  browser.tabs.onActivated.addListener(async ({ tabId }) => {
+    try {
+      const tab = await browser.tabs.get(tabId);
+      // tab.url is only populated for YouTube tabs (content script host permissions)
+      if (tab.url?.includes("youtube.com/")) {
+        postToPanel({ type: "TAB_ACTIVATED", tabId });
+      }
+    } catch {
+      // Tab no longer exists
+    }
   });
 
   browser.tabs.onRemoved.addListener((tabId) => {
-    relayToPanel({ type: "TAB_REMOVED", tabId });
+    postToPanel({ type: "TAB_REMOVED", tabId });
   });
 
   browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.destination !== "background") return;
-    const msg = message as ContentMessage | PanelRequest;
-    const tabId = sender.tab?.id;
+    const msg = message as PanelMessage;
 
     switch (msg.type) {
-      case "YT_CAPTIONS":
-      case "VIDEO_CHANGED":
-      case "VIDEO_DETAILS":
-      case "YT_NO_CAPTIONS":
-      case "VIDEO_TIME_UPDATE":
-        if (tabId) {
-          relayToPanel({ ...msg, tabId });
-        }
-        break;
-
       case "GET_CAPTIONS":
         browser.tabs
           .query({ active: true, currentWindow: true })

@@ -51,18 +51,18 @@
     <button
       onclick={() => onnavigate(-1)}
       class="rounded p-0.5 text-gray-500 hover:bg-gray-200 dark:hover:bg-neutral-700"
-      aria-label="Previous match"
-    >&#x25B2;</button>
+      aria-label="Previous match">▲</button
+    >
     <button
       onclick={() => onnavigate(1)}
       class="rounded p-0.5 text-gray-500 hover:bg-gray-200 dark:hover:bg-neutral-700"
-      aria-label="Next match"
-    >&#x25BC;</button>
+      aria-label="Next match">▼</button
+    >
   {/if}
 
   <button
     onclick={onclose}
     class="rounded p-0.5 text-gray-500 hover:bg-gray-200 dark:hover:bg-neutral-700"
-    aria-label="Close search"
-  >&#x2715;</button>
+    aria-label="Close search">✕</button
+  >
 </div>

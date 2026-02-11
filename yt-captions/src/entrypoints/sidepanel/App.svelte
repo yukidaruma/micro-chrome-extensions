@@ -2,28 +2,28 @@
   import { onMount } from "svelte";
   import { SvelteMap } from "svelte/reactivity";
   import { copyToClipboard } from "wxt-module-clipboard/client";
-  import { sendFromPanel as send } from "@/messages";
-  import type { Caption, GetCaptionsResponse, PanelMessage } from "@/messages";
+  import { postToBackground as send } from "@/messages";
+  import type {
+    Caption,
+    GetCaptionsResponse,
+    ContentMessage,
+    BackgroundMessage,
+  } from "@/messages";
   import HighlightText from "./HighlightText.svelte";
   import SearchBar from "./SearchBar.svelte";
 
-  type TabCaptions = { captions: Caption[]; videoTitle: string };
+  type TabData = { captions: Caption[]; title: string };
 
-  let captionMap = new SvelteMap<number, TabCaptions>();
-  let titleMap = new SvelteMap<number, string>();
+  let tabDataMap = new SvelteMap<number, TabData>();
   let activeTabId = $state(-1);
   let currentTimeMs = $state(-1);
   let hasCaptions = $state(false); // true: YouTube video with captions, false: YouTube video without captions or non-YouTube page
-  let loading = $state(false);
+  let isLoading = $state(false);
   let showSubtitleHint = $state(false);
-  let hintTimer: ReturnType<typeof setTimeout> | undefined;
+  let showCaptionHintTimer: ReturnType<typeof setTimeout> | undefined;
 
-  let captions = $derived(captionMap.get(activeTabId)?.captions ?? []);
-  let videoTitle = $derived(
-    captionMap.get(activeTabId)?.videoTitle ||
-      titleMap.get(activeTabId) ||
-      "",
-  );
+  let captions = $derived(tabDataMap.get(activeTabId)?.captions ?? []);
+  let videoTitle = $derived(tabDataMap.get(activeTabId)?.title ?? null);
 
   let activeIndex = $derived.by(() => {
     if (currentTimeMs < 0 || captions.length === 0) return -1;
@@ -141,72 +141,76 @@
       if (response?.activeTabId) {
         activeTabId = response.activeTabId;
         if (response.captions.length > 0) {
-          captionMap.set(response.activeTabId, {
+          tabDataMap.set(response.activeTabId, {
             captions: response.captions,
-            videoTitle: response.videoTitle,
+            title: response.videoTitle,
           });
         }
       }
     });
 
-    browser.runtime.onMessage.addListener((msg: PanelMessage) => {
-      if (msg.destination !== "sidepanel") return;
-      switch (msg.type) {
-        case "VIDEO_CHANGED":
-          captionMap.delete(msg.tabId);
-          titleMap.delete(msg.tabId);
-          if (msg.tabId === activeTabId) {
-            currentTimeMs = -1;
-            hasCaptions = msg.isVideo ?? false;
-            clearTimeout(hintTimer);
-            showSubtitleHint = false;
-            if (msg.isVideo) {
-              loading = true;
-              hintTimer = setTimeout(() => {
-                if (loading && captions.length === 0) showSubtitleHint = true;
-              }, 2500);
-            } else {
-              loading = false;
+    browser.runtime.onMessage.addListener(
+      (
+        message: ContentMessage | BackgroundMessage,
+        sender: Browser.runtime.MessageSender,
+      ) => {
+        if (message.destination !== "sidepanel") return;
+        const msg = message;
+        const tabId =
+          sender.tab?.id ??
+          (msg as BackgroundMessage & { tabId: number }).tabId;
+        if (!tabId) return;
+
+        switch (msg.type) {
+          case "VIDEO_CHANGED":
+            tabDataMap.delete(tabId);
+            if (tabId === activeTabId) {
+              currentTimeMs = -1;
+              hasCaptions = msg.isVideo ?? false;
+              clearTimeout(showCaptionHintTimer);
+              showSubtitleHint = false;
+              isLoading = msg.isVideo ?? false;
             }
+            break;
+          case "VIDEO_DATA": {
+            const existing = tabDataMap.get(tabId);
+            tabDataMap.set(tabId, {
+              captions: msg.captions ?? existing?.captions ?? [],
+              title: msg.videoTitle ?? existing?.title ?? "",
+            });
+            if (tabId === activeTabId) {
+              if (msg.captions) {
+                isLoading = false;
+                clearTimeout(showCaptionHintTimer);
+                showSubtitleHint = false;
+              } else if (msg.hasCaptions === false) {
+                isLoading = false;
+              } else if (msg.hasCaptions && isLoading) {
+                clearTimeout(showCaptionHintTimer);
+                showCaptionHintTimer = setTimeout(() => {
+                  if (isLoading && captions.length === 0)
+                    showSubtitleHint = true;
+                }, 2500);
+              }
+            }
+            break;
           }
-          break;
-        case "VIDEO_DETAILS":
-          titleMap.set(msg.tabId, msg.videoTitle);
-          break;
-        case "YT_NO_CAPTIONS":
-          if (msg.tabId === activeTabId) {
-            loading = false;
-            clearTimeout(hintTimer);
-            showSubtitleHint = false;
-          }
-          break;
-        case "YT_CAPTIONS":
-          captionMap.set(msg.tabId, {
-            captions: msg.captions,
-            videoTitle: msg.videoTitle,
-          });
-          if (msg.tabId === activeTabId) {
-            loading = false;
-            clearTimeout(hintTimer);
-            showSubtitleHint = false;
-          }
-          break;
-        case "VIDEO_TIME_UPDATE":
-          if (msg.tabId === activeTabId) {
-            currentTimeMs = msg.timeMs;
-          }
-          break;
-        case "TAB_ACTIVATED":
-          activeTabId = msg.tabId;
-          currentTimeMs = -1;
-          hasCaptions = false;
-          break;
-        case "TAB_REMOVED":
-          captionMap.delete(msg.tabId);
-          titleMap.delete(msg.tabId);
-          break;
-      }
-    });
+          case "VIDEO_TIME_UPDATE":
+            if (tabId === activeTabId) {
+              currentTimeMs = msg.timeMs;
+            }
+            break;
+          case "TAB_ACTIVATED":
+            activeTabId = tabId;
+            currentTimeMs = -1;
+            hasCaptions = false;
+            break;
+          case "TAB_REMOVED":
+            tabDataMap.delete(tabId);
+            break;
+        }
+      },
+    );
   });
 </script>
 
@@ -214,17 +218,6 @@
   class="flex h-screen flex-col bg-white pr-1 font-sans text-sm text-gray-900 dark:bg-neutral-900 dark:text-gray-200"
 >
   <div class="shrink-0">
-    {#if showSearch}
-      <SearchBar
-        bind:this={searchBar}
-        matchCount={matchIndices.length}
-        currentMatch={currentMatchPos}
-        onquery={onSearchQuery}
-        onnavigate={navigateMatch}
-        onclose={closeSearch}
-      />
-    {/if}
-
     <div
       class="flex items-center justify-between border-b border-gray-200 px-2 py-2 dark:border-neutral-700"
     >
@@ -268,6 +261,17 @@
         </button>
       </div>
     </div>
+
+    {#if showSearch}
+      <SearchBar
+        bind:this={searchBar}
+        matchCount={matchIndices.length}
+        currentMatch={currentMatchPos}
+        onquery={onSearchQuery}
+        onnavigate={navigateMatch}
+        onclose={closeSearch}
+      />
+    {/if}
   </div>
 
   <div
@@ -276,7 +280,7 @@
     ontouchstart={onUserScroll}
     class="flex-1 overflow-y-auto p-2"
   >
-    {#if captions.length === 0 && !loading}
+    {#if captions.length === 0 && !isLoading}
       <div class="py-8 text-center">
         <p class="text-base font-semibold text-gray-600 dark:text-gray-300">
           {#if hasCaptions}
@@ -295,14 +299,14 @@
       </div>
     {/if}
 
-    {#if captions.length === 0 && loading}
+    {#if captions.length === 0 && isLoading}
       <div class="relative">
         <ul
-          class="[&>li]:border-b [&>li]:border-gray-100 dark:[&>li]:border-neutral-800"
+          class="[&>li]:border-b [&>li]:border-b-gray-100 dark:[&>li]:border-b-neutral-800"
         >
           {#each [15, 25, 40, 18, 32, 22, 35, 20, 28, 24] as chars}
             <li>
-              <div class="flex items-baseline gap-2 px-1 py-1.5">
+              <div class="flex items-baseline gap-2 px-1 py-1.5 text-[13px]">
                 <div
                   class="h-5 w-8 shrink-0 animate-pulse rounded bg-gray-200 dark:bg-neutral-700"
                 ></div>
@@ -341,7 +345,7 @@
     {/if}
 
     <ul
-      class="[&>li]:border-b [&>li]:border-gray-100 dark:[&>li]:border-neutral-800"
+      class="[&>li]:border-b [&>li]:border-b-gray-100 dark:[&>li]:border-b-neutral-800"
     >
       {#each captions as caption, i (caption.startMs)}
         {@const isCurrentMatch =
@@ -349,18 +353,22 @@
         <li
           bind:this={captionEls[i]}
           class="{i === activeIndex
-            ? 'bg-yellow-100 dark:bg-yellow-900/30'
-            : ''} {isCurrentMatch ? 'ring-2 ring-inset ring-blue-400' : ''}"
+            ? 'bg-yellow-50 dark:bg-yellow-900/30'
+            : ''} {isCurrentMatch
+            ? 'ring-2 ring-inset ring-blue-400'
+            : ''}"
         >
           <button
             class="flex w-full cursor-pointer items-baseline gap-2 px-1 py-1.5 text-left text-[13px] {i ===
             activeIndex
-              ? 'hover:bg-yellow-200 dark:hover:bg-yellow-900/40'
+              ? 'font-semibold hover:bg-yellow-100 dark:hover:bg-yellow-900/40'
               : 'hover:bg-gray-100 dark:hover:bg-neutral-800'}"
             onclick={() => seek(caption.startMs)}
           >
-            <span class="shrink-0 font-mono text-[11px] text-gray-400"
-              >{formatTime(caption.startMs)}</span
+            <span
+              class="shrink-0 font-mono text-[11px] {i === activeIndex
+                ? 'text-gray-900 dark:text-gray-100'
+                : 'text-gray-400'}">{formatTime(caption.startMs)}</span
             >
             <HighlightText text={caption.text} query={searchQuery} />
           </button>

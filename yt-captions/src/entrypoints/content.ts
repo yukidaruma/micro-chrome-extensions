@@ -1,13 +1,23 @@
-import { sendFromContent as send } from "@/messages";
+import { postToInjected, postToPanel } from "@/messages";
 import type { Caption, InjectedMessage, TabCommand } from "@/messages";
 
+// This type definition is minimal; See https://github.com/lukewarlow/navigation-api-types for complete type definition.
+declare global {
+  interface Window {
+    navigation: {
+      addEventListener(type: "currententrychange", listener: () => void): void;
+    };
+  }
+}
+
 export default defineContentScript({
+  runAt: "document_start",
   matches: ["*://www.youtube.com/*"],
   async main() {
     console.log("Content script loaded.");
 
     let captions: Caption[] = [];
-    let videoTitle = "";
+    let videoTitle: string | null = null;
 
     await injectScript("/injected.js", {
       keepInDom: true,
@@ -15,34 +25,30 @@ export default defineContentScript({
 
     function onNavigation() {
       const isVideo = location.pathname === "/watch";
-      if (!isVideo) videoTitle = "";
+
+      if (!isVideo) videoTitle = null;
       captions = [];
-      send({ type: "VIDEO_CHANGED", isVideo });
+
+      postToPanel({ type: "VIDEO_CHANGED", isVideo });
     }
 
     onNavigation();
-    document.addEventListener("yt-navigate-start", onNavigation);
+    window.navigation.addEventListener("currententrychange", onNavigation);
 
     // From injected script
     window.addEventListener("message", (event) => {
       const msg = event.data as InjectedMessage | undefined;
       if (msg?.destination !== "content") return;
 
+      if (msg.relayToSidePanel) {
+        const { destination, relayToSidePanel: relay, ...body } = msg;
+        postToPanel(body);
+      }
+
       switch (msg.type) {
-        case "YT_CAPTIONS":
-          videoTitle = msg.videoTitle;
-          captions = msg.captions;
-          send({ type: "YT_CAPTIONS", captions, videoTitle });
-          break;
-        case "YT_NO_CAPTIONS":
-          send({ type: "YT_NO_CAPTIONS" });
-          break;
-        case "VIDEO_DETAILS":
-          videoTitle = msg.videoTitle;
-          send({ type: "VIDEO_DETAILS", videoTitle });
-          break;
-        case "VIDEO_TIME_UPDATE":
-          send({ type: "VIDEO_TIME_UPDATE", timeMs: msg.timeMs });
+        case "VIDEO_DATA":
+          if (msg.captions) captions = msg.captions;
+          if (msg.videoTitle) videoTitle = msg.videoTitle;
           break;
       }
     });
@@ -59,14 +65,10 @@ export default defineContentScript({
             break;
           }
           case "GET_CAPTIONS":
-            console.log("GET_CAPTION", captions);
             sendResponse({ captions, videoTitle });
             break;
           case "TOGGLE_SUBTITLES_ON":
-            window.postMessage(
-              { type: "TOGGLE_SUBTITLES_ON", destination: "injected" },
-              "*",
-            );
+            postToInjected({ type: "TOGGLE_SUBTITLES_ON" });
             break;
         }
       },

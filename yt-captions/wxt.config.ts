@@ -7,8 +7,13 @@ export default defineConfig({
     plugins: [tailwindcss()],
   }),
   srcDir: "src",
-  modules: ["@wxt-dev/module-svelte", "wxt-module-clipboard"],
+  modules: [
+    "@wxt-dev/auto-icons",
+    "@wxt-dev/module-svelte",
+    "wxt-module-clipboard",
+  ],
   manifest: {
+    name: "YT Captions",
     permissions: ["sidePanel"],
     web_accessible_resources: [
       {
@@ -17,7 +22,17 @@ export default defineConfig({
       },
     ],
   },
+  autoIcons: {
+    baseIconPath: "assets/icon.svg",
+    developmentIndicator: "overlay",
+  },
   webExt: {
     disabled: true,
+  },
+  dev: {
+    server: {
+      host: "0.0.0.0",
+      port: 3332,
+    },
   },
 });
