@@ -21,7 +21,7 @@ type TimedTextResponse = {
 };
 
 export default defineUnlistedScript(() => {
-  let videoTitle = "";
+  let videoTitle: string | null = null;
 
   /** Check player response for caption availability and extract title */
   function checkPlayerResponse(data: PlayerResponse) {
@@ -30,7 +30,7 @@ export default defineUnlistedScript(() => {
       const tracks =
         data.captions?.playerCaptionsTracklistRenderer?.captionTracks;
       postToContent({
-        type: "VIDEO_DATA",
+        type: "VIDEO_STATE",
         videoTitle,
         hasCaptions: !!tracks && tracks.length > 0,
         relayToSidePanel: true,
@@ -75,7 +75,7 @@ export default defineUnlistedScript(() => {
 
         if (captions.length > 0) {
           postToContent({
-            type: "VIDEO_DATA",
+            type: "VIDEO_STATE",
             captions,
             relayToSidePanel: true,
           });
@@ -162,7 +162,7 @@ export default defineUnlistedScript(() => {
       lastSentTime = now;
       const timeMs = Math.round(video.currentTime * 1000);
       postToContent({
-        type: "VIDEO_TIME_UPDATE",
+        type: "VIDEO_STATE",
         timeMs,
         relayToSidePanel: true,
       });

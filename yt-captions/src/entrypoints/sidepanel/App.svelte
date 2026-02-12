@@ -2,13 +2,8 @@
   import { onMount } from "svelte";
   import { SvelteMap } from "svelte/reactivity";
   import { copyToClipboard } from "wxt-module-clipboard/client";
-  import { postToBackground as send } from "@/messages";
-  import type {
-    Caption,
-    GetCaptionsResponse,
-    ContentMessage,
-    BackgroundMessage,
-  } from "@/messages";
+  import { postToBackground } from "@/messages";
+  import type { Caption, ContentMessage, BackgroundMessage } from "@/messages";
   import HighlightText from "./HighlightText.svelte";
   import SearchBar from "./SearchBar.svelte";
 
@@ -114,7 +109,7 @@
 
   function seek(timeMs: number) {
     currentTimeMs = timeMs;
-    send({ type: "SEEK_VIDEO", timeMs, tabId: activeTabId });
+    postToBackground({ type: "SEEK_VIDEO", timeMs, tabId: activeTabId });
   }
 
   let copied = $state(false);
@@ -128,6 +123,7 @@
     }
   }
 
+  let listener: Parameters<typeof browser.runtime.onMessage.addListener>[0];
   onMount(() => {
     const onKeydown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "f") {
@@ -137,80 +133,69 @@
     };
     document.addEventListener("keydown", onKeydown);
 
-    send({ type: "GET_CAPTIONS" }).then((response: GetCaptionsResponse) => {
-      if (response?.activeTabId) {
-        activeTabId = response.activeTabId;
-        if (response.captions.length > 0) {
-          tabDataMap.set(response.activeTabId, {
-            captions: response.captions,
-            title: response.videoTitle,
-          });
-        }
-      }
-    });
+    postToBackground({ type: "INIT" });
 
-    browser.runtime.onMessage.addListener(
-      (
-        message: ContentMessage | BackgroundMessage,
-        sender: Browser.runtime.MessageSender,
-      ) => {
-        if (message.destination !== "sidepanel") return;
-        const msg = message;
-        const tabId =
-          sender.tab?.id ??
-          (msg as BackgroundMessage & { tabId: number }).tabId;
-        if (!tabId) return;
+    listener = (message, sender) => {
+      if (message.destination !== "sidepanel") return;
+      const msg = message;
+      const tabId =
+        sender.tab?.id ?? (msg as BackgroundMessage & { tabId: number }).tabId;
+      if (!tabId) return;
 
-        switch (msg.type) {
-          case "VIDEO_CHANGED":
-            tabDataMap.delete(tabId);
-            if (tabId === activeTabId) {
-              currentTimeMs = -1;
-              hasCaptions = msg.isVideo ?? false;
-              clearTimeout(showCaptionHintTimer);
-              showSubtitleHint = false;
-              isLoading = msg.isVideo ?? false;
-            }
-            break;
-          case "VIDEO_DATA": {
-            const existing = tabDataMap.get(tabId);
-            tabDataMap.set(tabId, {
-              captions: msg.captions ?? existing?.captions ?? [],
-              title: msg.videoTitle ?? existing?.title ?? "",
-            });
-            if (tabId === activeTabId) {
-              if (msg.captions) {
-                isLoading = false;
-                clearTimeout(showCaptionHintTimer);
-                showSubtitleHint = false;
-              } else if (msg.hasCaptions === false) {
-                isLoading = false;
-              } else if (msg.hasCaptions && isLoading) {
-                clearTimeout(showCaptionHintTimer);
-                showCaptionHintTimer = setTimeout(() => {
-                  if (isLoading && captions.length === 0)
-                    showSubtitleHint = true;
-                }, 2500);
-              }
-            }
-            break;
+      switch (msg.type) {
+        case "VIDEO_CHANGED":
+          tabDataMap.delete(tabId);
+          if (tabId === activeTabId) {
+            currentTimeMs = -1;
+            hasCaptions = msg.isVideo ?? false;
+            clearTimeout(showCaptionHintTimer);
+            showSubtitleHint = false;
+            isLoading = msg.isVideo ?? false;
           }
-          case "VIDEO_TIME_UPDATE":
+          break;
+        case "VIDEO_STATE": {
+          if (msg.timeMs != null) {
             if (tabId === activeTabId) {
               currentTimeMs = msg.timeMs;
             }
             break;
-          case "TAB_ACTIVATED":
-            activeTabId = tabId;
-            currentTimeMs = -1;
-            hasCaptions = false;
-            break;
-          case "TAB_REMOVED":
-            tabDataMap.delete(tabId);
-            break;
+          }
+          const existing = tabDataMap.get(tabId);
+          tabDataMap.set(tabId, {
+            captions: msg.captions ?? existing?.captions ?? [],
+            title: msg.videoTitle ?? existing?.title ?? "",
+          });
+          if (tabId === activeTabId) {
+            if (msg.captions) {
+              isLoading = false;
+              clearTimeout(showCaptionHintTimer);
+              showSubtitleHint = false;
+            } else if (msg.hasCaptions === false) {
+              isLoading = false;
+            } else if (msg.hasCaptions && isLoading) {
+              clearTimeout(showCaptionHintTimer);
+              showCaptionHintTimer = setTimeout(() => {
+                if (isLoading && captions.length === 0) showSubtitleHint = true;
+              }, 2500);
+            }
+          }
+          break;
         }
-      },
-    );
+        case "TAB_ACTIVATED":
+          activeTabId = tabId;
+          currentTimeMs = -1;
+          break;
+        case "TAB_REMOVED":
+          tabDataMap.delete(tabId);
+          break;
+      }
+    };
+
+    browser.runtime.onMessage.addListener(listener);
+  });
+
+  onDestroy(() => {
+    browser.runtime.onMessage.removeListener(listener);
   });
 </script>
 
@@ -231,9 +216,13 @@
         </button>
         {#if captions.length > 0}
           <div
-            class="pointer-events-none absolute left-0 top-full mt-1 z-10 w-[22ch] text-center rounded-lg bg-gray-800 py-1.5 text-xs text-white shadow-lg dark:bg-neutral-700 {copied
-              ? 'opacity-100'
-              : 'opacity-0 group-hover:opacity-100'} transition-opacity"
+            class={[
+              "pointer-events-none absolute left-0 top-full mt-1 z-10 w-[22ch] text-center rounded-lg bg-gray-800 py-1.5 text-xs text-white shadow-lg dark:bg-neutral-700 transition-opacity",
+              {
+                "opacity-100": copied,
+                "opacity-0 group-hover:opacity-100": !copied,
+              },
+            ]}
           >
             {copied ? "Copied to clipboard!" : "Click to copy captions"}
           </div>
@@ -241,9 +230,10 @@
       </div>
 
       <div
-        class="flex shrink-0 items-center gap-1 {captions.length > 0
-          ? 'visible'
-          : 'invisible'}"
+        class={[
+          "flex shrink-0 items-center gap-1",
+          { visible: captions.length > 0, invisible: captions.length === 0 },
+        ]}
       >
         <button
           onclick={() => {
@@ -251,9 +241,13 @@
             if (autoScroll && activeIndex >= 0 && captionEls[activeIndex])
               scrollToCaption(captionEls[activeIndex]);
           }}
-          class="rounded p-1 text-sm font-semibold {autoScroll
-            ? 'text-blue-500 dark:text-blue-400'
-            : 'text-gray-400'} hover:bg-gray-200 dark:hover:bg-neutral-700"
+          class={[
+            "rounded p-1 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-neutral-700",
+            {
+              "text-blue-500 dark:text-blue-400": autoScroll,
+              "text-gray-400": !autoScroll,
+            },
+          ]}
           aria-label="Toggle auto-scroll"
           title={autoScroll ? "Auto-scroll: ON" : "Auto-scroll: OFF"}
         >
@@ -306,7 +300,9 @@
         >
           {#each [15, 25, 40, 18, 32, 22, 35, 20, 28, 24] as chars}
             <li>
-              <div class="flex items-baseline gap-2 px-1 py-1.5 text-[13px]">
+              <div
+                class="flex min-h-8 items-baseline gap-2 px-1 py-1.5 text-[13px]"
+              >
                 <div
                   class="h-5 w-8 shrink-0 animate-pulse rounded bg-gray-200 dark:bg-neutral-700"
                 ></div>
@@ -333,7 +329,10 @@
               </p>
               <button
                 onclick={() =>
-                  send({ type: "TOGGLE_SUBTITLES_ON", tabId: activeTabId })}
+                  postToBackground({
+                    type: "TOGGLE_SUBTITLES_ON",
+                    tabId: activeTabId,
+                  })}
                 class="mt-2 cursor-pointer text-xs text-blue-600 dark:text-blue-400 underline underline-offset-2 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
               >
                 Turn on captions
@@ -352,24 +351,22 @@
           searchQuery && matchIndices[currentMatchPos] === i}
         <li
           bind:this={captionEls[i]}
-          class="{i === activeIndex
-            ? 'bg-yellow-50 dark:bg-yellow-900/30'
-            : ''} {isCurrentMatch
-            ? 'ring-2 ring-inset ring-blue-400'
-            : ''}"
+          class={{
+            "ring-2 ring-inset ring-blue-400": isCurrentMatch,
+          }}
         >
           <button
-            class="flex w-full cursor-pointer items-baseline gap-2 px-1 py-1.5 text-left text-[13px] {i ===
-            activeIndex
-              ? 'font-semibold hover:bg-yellow-100 dark:hover:bg-yellow-900/40'
-              : 'hover:bg-gray-100 dark:hover:bg-neutral-800'}"
+            class={[
+              "flex min-h-8 w-full cursor-pointer items-baseline gap-2 px-1 py-1.5 text-left text-[13px]",
+              i === activeIndex
+                ? "text-black dark:text-gray-100 bg-yellow-100 dark:bg-yellow-900/40"
+                : "text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-neutral-800",
+            ]}
             onclick={() => seek(caption.startMs)}
           >
-            <span
-              class="shrink-0 font-mono text-[11px] {i === activeIndex
-                ? 'text-gray-900 dark:text-gray-100'
-                : 'text-gray-400'}">{formatTime(caption.startMs)}</span
-            >
+            <span class="shrink-0 font-mono text-[11px] text-gray-500">
+              {formatTime(caption.startMs)}
+            </span>
             <HighlightText text={caption.text} query={searchQuery} />
           </button>
         </li>

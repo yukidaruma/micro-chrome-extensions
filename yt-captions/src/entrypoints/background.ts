@@ -1,5 +1,5 @@
-import { postToPanel } from "@/messages";
-import type { GetCaptionsResponse, PanelMessage, TabCommand } from "@/messages";
+import { postToPanel, postToTab } from "@/messages";
+import type { PanelMessage } from "@/messages";
 
 export default defineBackground(() => {
   browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
@@ -8,8 +8,9 @@ export default defineBackground(() => {
     try {
       const tab = await browser.tabs.get(tabId);
       // tab.url is only populated for YouTube tabs (content script host permissions)
-      if (tab.url?.includes("youtube.com/")) {
+      if (tab.url && new URL(tab.url).hostname === "www.youtube.com") {
         postToPanel({ type: "TAB_ACTIVATED", tabId });
+        postToTab(tabId, { type: "INIT" });
       }
     } catch {
       // Tab no longer exists
@@ -25,42 +26,31 @@ export default defineBackground(() => {
     const msg = message as PanelMessage;
 
     switch (msg.type) {
-      case "GET_CAPTIONS":
+      case "INIT":
         browser.tabs
           .query({ active: true, currentWindow: true })
           .then(async (tabs) => {
-            const activeTabId = tabs[0]?.id;
-            const res: GetCaptionsResponse = {
-              captions: [],
-              videoTitle: "",
-              activeTabId,
-            };
-            if (activeTabId) {
-              try {
-                const data = await browser.tabs.sendMessage(activeTabId, {
-                  type: "GET_CAPTIONS",
-                } satisfies TabCommand);
-                res.captions = data.captions ?? [];
-                res.videoTitle = data.videoTitle ?? "";
-              } catch {
-                // Content script not available (non-YouTube tab)
-              }
+            if (!tabs[0]) return;
+            const tab = tabs[0];
+            const tabId = tab.id;
+            const url = tab.url ? new URL(tab.url) : null;
+            if (
+              url &&
+              tabId &&
+              url.hostname === "www.youtube.com" &&
+              url.pathname === "watch"
+            ) {
+              postToTab(tabId, { type: "INIT" });
             }
-            (sendResponse as (r: GetCaptionsResponse) => void)(res);
           });
-        return true;
+        break;
 
       case "SEEK_VIDEO":
-        browser.tabs.sendMessage(msg.tabId, {
-          type: "SEEK_VIDEO",
-          timeMs: msg.timeMs,
-        } satisfies TabCommand);
+        postToTab(msg.tabId, { type: "SEEK_VIDEO", timeMs: msg.timeMs });
         break;
 
       case "TOGGLE_SUBTITLES_ON":
-        browser.tabs.sendMessage(msg.tabId, {
-          type: "TOGGLE_SUBTITLES_ON",
-        } satisfies TabCommand);
+        postToTab(msg.tabId, { type: "TOGGLE_SUBTITLES_ON" });
         break;
     }
   });

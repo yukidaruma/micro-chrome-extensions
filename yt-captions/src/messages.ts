@@ -11,31 +11,28 @@ type Body<T> = T extends { destination: string }
 export type InjectedMessage = {
   destination: "content";
   relayToSidePanel?: boolean;
-} & (
-  | {
-      type: "VIDEO_DATA";
-      videoTitle?: string;
-      hasCaptions?: boolean;
-      captions?: Caption[];
-    }
-  | { type: "VIDEO_TIME_UPDATE"; timeMs: number }
-);
+  type: "VIDEO_STATE";
+  videoTitle?: string;
+  hasCaptions?: boolean;
+  captions?: Caption[];
+  timeMs?: number;
+};
 
 // browser.runtime.sendMessage: content → sidepanel
 export type ContentMessage = { destination: "sidepanel" } & (
   | {
-      type: "VIDEO_DATA";
-      videoTitle?: string;
+      type: "VIDEO_STATE";
+      videoTitle?: string | null;
       hasCaptions?: boolean;
       captions?: Caption[];
+      timeMs?: number;
     }
   | { type: "VIDEO_CHANGED"; isVideo: boolean }
-  | { type: "VIDEO_TIME_UPDATE"; timeMs: number }
 );
 
 // browser.runtime.sendMessage: sidepanel → background
 export type PanelMessage = { destination: "background" } & (
-  | { type: "GET_CAPTIONS" }
+  | { type: "INIT" }
   | { type: "SEEK_VIDEO"; timeMs: number; tabId: number }
   | { type: "TOGGLE_SUBTITLES_ON"; tabId: number }
 );
@@ -49,15 +46,8 @@ export type BackgroundMessage = { destination: "sidepanel" } & (
 // browser.tabs.sendMessage: background → content
 export type TabCommand =
   | { type: "SEEK_VIDEO"; timeMs: number }
-  | { type: "GET_CAPTIONS" }
+  | { type: "INIT" }
   | { type: "TOGGLE_SUBTITLES_ON" };
-
-// GET_CAPTIONS response
-export type GetCaptionsResponse = {
-  captions: Caption[];
-  videoTitle: string;
-  activeTabId?: number;
-};
 
 // window.postMessage: content → injected
 export type InjectedCommand = { destination: "injected" } & {
@@ -89,4 +79,8 @@ export function postToPanel(
   return browser.runtime
     .sendMessage({ ...message, destination: "sidepanel" })
     .catch(() => {});
+}
+
+export function postToTab(tabId: number, message: TabCommand) {
+  return browser.tabs.sendMessage(tabId, message).catch(() => {});
 }

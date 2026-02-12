@@ -13,7 +13,7 @@ export default defineConfig({
     "wxt-module-clipboard",
   ],
   manifest: {
-    name: "YT Captions",
+    name: "YT Caption Panel",
     permissions: ["sidePanel"],
     web_accessible_resources: [
       {

@@ -1,6 +1,6 @@
 {
   "name": "yt-captions",
-  "description": "YT Captions",
+  "description": "YT Caption Panel",
   "private": true,
   "version": "1.0.0",
   "type": "module",

@@ -18,6 +18,7 @@ export default defineContentScript({
 
     let captions: Caption[] = [];
     let videoTitle: string | null = null;
+    let hasCaptions: boolean = false;
 
     await injectScript("/injected.js", {
       keepInDom: true,
@@ -28,6 +29,7 @@ export default defineContentScript({
 
       if (!isVideo) videoTitle = null;
       captions = [];
+      hasCaptions = false;
 
       postToPanel({ type: "VIDEO_CHANGED", isVideo });
     }
@@ -46,9 +48,10 @@ export default defineContentScript({
       }
 
       switch (msg.type) {
-        case "VIDEO_DATA":
+        case "VIDEO_STATE":
           if (msg.captions) captions = msg.captions;
           if (msg.videoTitle) videoTitle = msg.videoTitle;
+          if (msg.hasCaptions != null) hasCaptions = msg.hasCaptions;
           break;
       }
     });
@@ -64,9 +67,20 @@ export default defineContentScript({
             }
             break;
           }
-          case "GET_CAPTIONS":
-            sendResponse({ captions, videoTitle });
+          case "INIT": {
+            const isVideo = location.pathname === "/watch";
+            postToPanel({ type: "VIDEO_CHANGED", isVideo });
+            const video = document.querySelector("video");
+            const timeMs = video ? video.currentTime * 1000 : undefined;
+            postToPanel({
+              type: "VIDEO_STATE",
+              captions,
+              videoTitle,
+              hasCaptions,
+              timeMs,
+            });
             break;
+          }
           case "TOGGLE_SUBTITLES_ON":
             postToInjected({ type: "TOGGLE_SUBTITLES_ON" });
             break;
