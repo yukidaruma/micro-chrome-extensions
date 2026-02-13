@@ -14,7 +14,7 @@ export default defineConfig({
   ],
   manifest: {
     name: "YT Caption Panel",
-    permissions: ["sidePanel"],
+    permissions: ["sidePanel", "tabs"],
     web_accessible_resources: [
       {
         resources: ["injected.js"],

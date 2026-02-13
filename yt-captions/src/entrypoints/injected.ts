@@ -1,3 +1,4 @@
+import logger from "@/logger";
 import { postToContent } from "@/messages";
 import type { InjectedCommand } from "@/messages";
 
@@ -21,6 +22,8 @@ type TimedTextResponse = {
 };
 
 export default defineUnlistedScript(() => {
+  logger.log("Injected script loaded.");
+
   let videoTitle: string | null = null;
 
   /** Check player response for caption availability and extract title */
@@ -102,15 +105,16 @@ export default defineUnlistedScript(() => {
   }
 
   // Fetch
-  const originalFetch = window.fetch;
+  const originalFetch = window.fetch.bind(window);
   window.fetch = async function (...args) {
-    const response = await originalFetch.apply(this, args);
+    const response = await originalFetch(...args);
     const url =
       args[0] instanceof Request ? args[0].url : args[0]?.toString() || "";
 
     const interceptor = interceptors.find((i) => url.includes(i.match));
     if (interceptor) {
       response.clone().json().then(interceptor.handle);
+      logger.log("interceptor!", url);
     }
 
     return response;
@@ -127,6 +131,7 @@ export default defineUnlistedScript(() => {
       );
       if (!interceptor) return;
 
+      logger.log("interceptor!", this.responseURL);
       try {
         interceptor.handle(JSON.parse(this.responseText));
       } catch {}

@@ -30,18 +30,23 @@ export default defineBackground(() => {
         browser.tabs
           .query({
             windowId: msg.windowId,
-            url: "https://www.youtube.com/watch?*",
+            url: "https://www.youtube.com/*",
           })
           .then(async (tabs) => {
-            const [ytTab] = tabs;
-            if (ytTab?.id) {
-              postToTab(ytTab.id, { type: "INIT" });
-              sendResponse({
-                destination: "background",
-                type: "YT_TAB_FOUND",
-                tabId: ytTab.id,
-              } satisfies SidePanelOpenResponse);
+            // Score: /watch=2, active=1
+            // 3: active, /watch
+            // 2: inactive, /watch
+            // 1: active, non-/watch
+            // 0: inactive, non-/watch
+            const score = (t: Browser.tabs.Tab) =>
+              (t.url && new URL(t.url).pathname === "/watch" ? 2 : 0) +
+              (t.active ? 1 : 0);
+            const sorted = tabs.sort((a, b) => score(b) - score(a));
+            const tabIds = sorted.flatMap((t) => (t.id != null ? [t.id] : []));
+            if (tabIds.length > 0) {
+              postToTab(tabIds[0], { type: "INIT" });
             }
+            sendResponse({ tabIds } satisfies SidePanelOpenResponse);
           });
         return true; // keep sendResponse alive for async .then()
 

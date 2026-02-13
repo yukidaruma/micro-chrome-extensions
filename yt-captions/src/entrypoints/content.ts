@@ -1,3 +1,4 @@
+import logger from "@/logger";
 import { postToInjected, postToPanel } from "@/messages";
 import type {
   Caption,
@@ -18,7 +19,7 @@ export default defineContentScript({
   runAt: "document_start",
   matches: ["*://www.youtube.com/*"], // Match all pages since YouTube is a SPA
   async main() {
-    console.log("Content script loaded.");
+    logger.log("Content script loaded.");
 
     let captions: Caption[] = [];
     let videoTitle: string | null = null;

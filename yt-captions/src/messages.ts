@@ -1,3 +1,4 @@
+import logger from "@/logger";
 import { browser } from "wxt/browser";
 
 export type Caption = { startMs: number; text: string };
@@ -7,7 +8,7 @@ type Body<T> = T extends { destination: string }
   ? Omit<T, "destination">
   : never;
 
-// window.postMessage: injected → content
+// window.postMessage: injected -> content
 export type InjectedMessage = {
   destination: "content";
   relayToSidePanel?: boolean;
@@ -18,7 +19,7 @@ export type InjectedMessage = {
   timeMs?: number;
 };
 
-// browser.runtime.sendMessage: content → sidepanel
+// browser.runtime.sendMessage: content -> sidepanel
 export type ContentMessage = { destination: "sidepanel" } & (
   | {
       type: "VIDEO_STATE";
@@ -30,33 +31,31 @@ export type ContentMessage = { destination: "sidepanel" } & (
   | { type: "YT_NAVIGATE"; isVideo: boolean }
 );
 
-// browser.runtime.sendMessage: sidepanel → background
+// browser.runtime.sendMessage: sidepanel -> background
 export type PanelMessage = { destination: "background" } & (
   | { type: "SIDE_PANEL_OPEN"; windowId: number }
   | { type: "SEEK_VIDEO"; timeMs: number; tabId: number }
   | { type: "TOGGLE_SUBTITLES_ON"; tabId: number }
 );
 
-// browser.runtime.sendMessage: background → sidepanel
+// browser.runtime.sendMessage: background -> sidepanel
 export type BackgroundToPanelMessage = { destination: "sidepanel" } & (
   | { type: "YT_TAB_ACTIVATED"; tabId: number }
   | { type: "TAB_REMOVED"; tabId: number }
 );
 
-// sendResponse: background → sidepanel (response to OPEN)
+// sendResponse: background -> sidepanel (response to OPEN)
 export type SidePanelOpenResponse = {
-  destination: "background";
-  type: "YT_TAB_FOUND";
-  tabId?: number;
+  tabIds: number[];
 };
 
-// browser.tabs.sendMessage: background → content
+// browser.tabs.sendMessage: background -> content
 export type BackgroundToTabMessage =
   | { type: "SEEK_VIDEO"; timeMs: number }
   | { type: "INIT" }
   | { type: "TOGGLE_SUBTITLES_ON" };
 
-// window.postMessage: content → injected
+// window.postMessage: content -> injected
 export type InjectedCommand = { destination: "injected" } & {
   type: "TOGGLE_SUBTITLES_ON";
 };
@@ -64,10 +63,12 @@ export type InjectedCommand = { destination: "injected" } & {
 // Senders
 
 export function postToInjected(message: Body<InjectedCommand>) {
+  logger.debug("-> injected", message);
   window.postMessage({ ...message, destination: "injected" }, location.origin);
 }
 
 export function postToContent(message: Body<InjectedMessage>) {
+  logger.debug("-> content", message);
   window.postMessage({ ...message, destination: "content" }, location.origin);
 }
 
@@ -75,6 +76,7 @@ export function postToContent(message: Body<InjectedMessage>) {
 // when the destination (sidepanel/background) is not active.
 
 export function postToBackground(message: Body<PanelMessage>) {
+  logger.debug("-> background", message);
   return browser.runtime
     .sendMessage({ ...message, destination: "background" })
     .catch(() => {});
@@ -83,11 +85,13 @@ export function postToBackground(message: Body<PanelMessage>) {
 export function postToPanel(
   message: Body<ContentMessage> | Body<BackgroundToPanelMessage>,
 ) {
+  logger.debug("-> sidepanel", message);
   return browser.runtime
     .sendMessage({ ...message, destination: "sidepanel" })
     .catch(() => {});
 }
 
 export function postToTab(tabId: number, message: BackgroundToTabMessage) {
+  logger.debug(`-> tab(${tabId})`, message);
   return browser.tabs.sendMessage(tabId, message).catch(() => {});
 }

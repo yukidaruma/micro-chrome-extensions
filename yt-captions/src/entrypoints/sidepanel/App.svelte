@@ -31,15 +31,6 @@
   function updateTab(tabId: number, patch: Partial<TabData>) {
     const existing = tabDataMap.get(tabId) ?? defaultTabData;
     tabDataMap.set(tabId, { ...existing, ...patch });
-
-    console.log(
-      "updateTab",
-      tabId,
-      tabDataMap.get(tabId),
-      existing.title,
-      patch.title,
-      "title" in patch,
-    );
   }
 
   let activeTabData = $derived(tabDataMap.get(activeYtTabId));
@@ -170,7 +161,15 @@
         type: "SIDE_PANEL_OPEN",
         windowId: win.id,
       })) as messages.SidePanelOpenResponse | undefined;
-      if (res?.tabId) activeYtTabId = res.tabId;
+      if (res?.tabIds?.length) {
+        activeYtTabId = [...tabDataMap.entries()].reduce(
+          (best, [tabId, data]) =>
+            res.tabIds.includes(tabId) && data.captions.length > 0 && !best.hasCaptions
+              ? { tabId, hasCaptions: true }
+              : best,
+          { tabId: res.tabIds[0], hasCaptions: false },
+        ).tabId;
+      }
     });
 
     const onKeydown = (e: KeyboardEvent) => {
@@ -188,6 +187,8 @@
       const tabId =
         sender.tab?.id ?? (message as messages.BackgroundToPanelMessage).tabId;
       if (!tabId) return;
+
+      if (activeYtTabId < 0) activeYtTabId = tabId;
 
       switch (message.type) {
         case "YT_NAVIGATE":
@@ -225,7 +226,6 @@
             patch.isLoading = false;
           }
 
-          console.log("VIDEO_STATE", message);
           updateTab(tabId, patch);
           break;
         }
