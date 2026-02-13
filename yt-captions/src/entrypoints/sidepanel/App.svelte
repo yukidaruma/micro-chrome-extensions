@@ -5,6 +5,7 @@
   import * as messages from "@/messages";
   import HighlightText from "./HighlightText.svelte";
   import SearchBar from "./SearchBar.svelte";
+  import Tooltip from "./Tooltip.svelte";
   import logger from "@/logger";
 
   type TabData = {
@@ -262,28 +263,19 @@
     <div
       class="flex items-center justify-between border-b border-gray-200 px-2 py-2 dark:border-neutral-700"
     >
-      <div class="group relative min-w-0 overflow-hidden px-0.5">
+      <Tooltip
+        text={copied ? "Copied to clipboard!" : "Click to copy captions"}
+        visible={copied}
+        enabled={captions.length > 0}
+      >
         <button
           onclick={copyAllCaptions}
-          class="block w-full min-w-0 truncate text-sm font-semibold text-left cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+          class="block w-full min-w-0 truncate text-sm font-semibold text-left cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition-colors px-0.5"
           disabled={captions.length === 0}
         >
           {videoTitle}
         </button>
-        {#if captions.length > 0}
-          <div
-            class={[
-              "pointer-events-none absolute left-0 top-full mt-1 z-10 w-[22ch] text-center rounded-lg bg-gray-800 py-1.5 text-xs text-white shadow-lg dark:bg-neutral-700 transition-opacity",
-              {
-                "opacity-100": copied,
-                "opacity-0 group-hover:opacity-100": !copied,
-              },
-            ]}
-          >
-            {copied ? "Copied to clipboard!" : "Click to copy captions"}
-          </div>
-        {/if}
-      </div>
+      </Tooltip>
 
       <div
         class={[
@@ -291,24 +283,25 @@
           { visible: captions.length > 0, invisible: captions.length === 0 },
         ]}
       >
-        <button
-          onclick={() => {
-            autoScroll = !autoScroll;
-            if (autoScroll && activeIndex >= 0 && captionEls[activeIndex])
-              scrollToCaption(captionEls[activeIndex]);
-          }}
-          class={[
-            "rounded p-1 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-neutral-700",
-            {
-              "text-blue-500 dark:text-blue-400": autoScroll,
-              "text-gray-400": !autoScroll,
-            },
-          ]}
-          aria-label="Toggle auto-scroll"
-          title={autoScroll ? "Auto-scroll: ON" : "Auto-scroll: OFF"}
-        >
-          Scroll
-        </button>
+        <Tooltip text={autoScroll ? "Turn off auto-scroll" : "Turn on auto-scroll"} align="right">
+          <button
+            onclick={() => {
+              autoScroll = !autoScroll;
+              if (autoScroll && activeIndex >= 0 && captionEls[activeIndex])
+                scrollToCaption(captionEls[activeIndex]);
+            }}
+            class={[
+              "rounded p-1 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-neutral-700",
+              {
+                "text-blue-500 dark:text-blue-400": autoScroll,
+                "text-gray-400": !autoScroll,
+              },
+            ]}
+            aria-label="Toggle auto-scroll"
+          >
+            Scroll
+          </button>
+        </Tooltip>
       </div>
     </div>
 
@@ -418,7 +411,7 @@
             ]}
             onclick={() => seek(caption.startMs)}
           >
-            <span class="shrink-0 font-mono text-[11px] text-gray-500">
+            <span class="shrink-0 font-mono text-[11px] text-gray-500 dark:text-gray-400">
               {formatTime(caption.startMs)}
             </span>
             <HighlightText text={caption.text} query={searchQuery} />
