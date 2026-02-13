@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { SvelteMap } from "svelte/reactivity";
   import { copyToClipboard } from "wxt-module-clipboard/client";
   import * as messages from "@/messages";
@@ -30,8 +30,8 @@
     showSubtitleHint: false,
   } as const;
 
-  function updateTab(tabId: number, patch: Partial<TabData> | null) {
-    logger.log("updateTab", patch);
+  function updateTabData(tabId: number, patch: Partial<TabData> | null) {
+    logger.log("updateTabData", patch);
 
     if (!patch) {
       tabDataMap.delete(tabId);
@@ -74,9 +74,10 @@
   );
   let currentMatchPos = $state(0);
 
-  function openSearch() {
+  async function openSearch() {
     showSearch = true;
     currentMatchPos = 0;
+    await tick();
     searchBar?.focus();
   }
 
@@ -144,7 +145,7 @@
   }
 
   function seek(timeMs: number) {
-    updateTab(activeYtTabId, { timeMs }); // Update local state immediately without waiting for the seek
+    updateTabData(activeYtTabId, { timeMs }); // Update local state immediately without waiting for the seek
     messages.postToBackground({
       type: "SEEK_VIDEO",
       timeMs,
@@ -204,7 +205,7 @@
       switch (message.type) {
         case "YT_NAVIGATE":
           clearTimeout(showCaptionHintTimer);
-          updateTab(tabId, null);
+          updateTabData(tabId, null);
           break;
         case "VIDEO_STATE": {
           const patch: Partial<TabData> = {};
@@ -225,7 +226,7 @@
               showCaptionHintTimer = setTimeout(() => {
                 const current = tabDataMap.get(tabId);
                 if (current?.isLoading && current.captions.length === 0) {
-                  updateTab(tabId, { showSubtitleHint: true });
+                  updateTabData(tabId, { showSubtitleHint: true });
                 }
               }, 2500);
             }
@@ -234,7 +235,8 @@
             patch.isLoading = false;
           }
 
-          updateTab(tabId, patch);
+          logger.debug(message);
+          updateTabData(tabId, patch);
           break;
         }
         case "YT_TAB_ACTIVATED":
@@ -283,7 +285,10 @@
           { visible: captions.length > 0, invisible: captions.length === 0 },
         ]}
       >
-        <Tooltip text={autoScroll ? "Turn off auto-scroll" : "Turn on auto-scroll"} align="right">
+        <Tooltip
+          text={autoScroll ? "Turn off auto-scroll" : "Turn on auto-scroll"}
+          align="right"
+        >
           <button
             onclick={() => {
               autoScroll = !autoScroll;
@@ -398,6 +403,7 @@
         {@const isCurrentMatch =
           searchQuery && matchIndices[currentMatchPos] === i}
         <li
+          bind:this={captionEls[i]}
           class={{
             "ring-2 ring-inset ring-blue-400": isCurrentMatch,
           }}
@@ -411,7 +417,9 @@
             ]}
             onclick={() => seek(caption.startMs)}
           >
-            <span class="shrink-0 font-mono text-[11px] text-gray-500 dark:text-gray-400">
+            <span
+              class="shrink-0 font-mono text-[11px] text-gray-500 dark:text-gray-400"
+            >
               {formatTime(caption.startMs)}
             </span>
             <HighlightText text={caption.text} query={searchQuery} />

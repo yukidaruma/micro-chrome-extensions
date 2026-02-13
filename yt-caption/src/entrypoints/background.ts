@@ -51,12 +51,11 @@ export default defineBackground(() => {
         return true; // keep sendResponse alive for async .then()
 
       case "SEEK_VIDEO":
-        postToTab(msg.tabId, { type: "SEEK_VIDEO", timeMs: msg.timeMs });
+      case "TOGGLE_SUBTITLES_ON": {
+        const { tabId, destination, ...payload } = msg;
+        postToTab(tabId, payload);
         break;
-
-      case "TOGGLE_SUBTITLES_ON":
-        postToTab(msg.tabId, { type: "TOGGLE_SUBTITLES_ON" });
-        break;
+      }
     }
   });
 });
