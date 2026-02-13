@@ -32,19 +32,19 @@ export type ContentMessage = { destination: "sidepanel" } & (
 
 // browser.runtime.sendMessage: sidepanel → background
 export type PanelMessage = { destination: "background" } & (
-  | { type: "INIT" }
+  | { type: "OPEN"; windowId: number }
   | { type: "SEEK_VIDEO"; timeMs: number; tabId: number }
   | { type: "TOGGLE_SUBTITLES_ON"; tabId: number }
 );
 
 // browser.runtime.sendMessage: background → sidepanel
-export type BackgroundMessage = { destination: "sidepanel" } & (
+export type BackgroundToPanelMessage = { destination: "sidepanel" } & (
   | { type: "TAB_ACTIVATED"; tabId: number }
   | { type: "TAB_REMOVED"; tabId: number }
 );
 
 // browser.tabs.sendMessage: background → content
-export type TabCommand =
+export type BackgroundToTabMessage =
   | { type: "SEEK_VIDEO"; timeMs: number }
   | { type: "INIT" }
   | { type: "TOGGLE_SUBTITLES_ON" };
@@ -74,13 +74,13 @@ export function postToBackground(message: Body<PanelMessage>) {
 }
 
 export function postToPanel(
-  message: Body<ContentMessage> | Body<BackgroundMessage>,
+  message: Body<ContentMessage> | Body<BackgroundToPanelMessage>,
 ) {
   return browser.runtime
     .sendMessage({ ...message, destination: "sidepanel" })
     .catch(() => {});
 }
 
-export function postToTab(tabId: number, message: TabCommand) {
+export function postToTab(tabId: number, message: BackgroundToTabMessage) {
   return browser.tabs.sendMessage(tabId, message).catch(() => {});
 }

@@ -3,7 +3,11 @@
   import { SvelteMap } from "svelte/reactivity";
   import { copyToClipboard } from "wxt-module-clipboard/client";
   import { postToBackground } from "@/messages";
-  import type { Caption, ContentMessage, BackgroundMessage } from "@/messages";
+  import type {
+    Caption,
+    ContentMessage,
+    BackgroundToPanelMessage,
+  } from "@/messages";
   import HighlightText from "./HighlightText.svelte";
   import SearchBar from "./SearchBar.svelte";
 
@@ -22,12 +26,7 @@
 
   let activeIndex = $derived.by(() => {
     if (currentTimeMs < 0 || captions.length === 0) return -1;
-    let idx = -1;
-    for (let i = 0; i < captions.length; i++) {
-      if (captions[i].startMs <= currentTimeMs) idx = i;
-      else break;
-    }
-    return idx;
+    return captions.findLastIndex((c) => c.startMs <= currentTimeMs);
   });
 
   let captionEls: HTMLLIElement[] = [];
@@ -131,15 +130,19 @@
         openSearch();
       }
     };
+
     document.addEventListener("keydown", onKeydown);
 
-    postToBackground({ type: "INIT" });
+    browser.windows.getCurrent().then((win) => {
+      if (win.id != null) postToBackground({ type: "OPEN", windowId: win.id });
+    });
 
     listener = (message, sender) => {
       if (message.destination !== "sidepanel") return;
       const msg = message;
       const tabId =
-        sender.tab?.id ?? (msg as BackgroundMessage & { tabId: number }).tabId;
+        sender.tab?.id ??
+        (msg as BackgroundToPanelMessage & { tabId: number }).tabId;
       if (!tabId) return;
 
       switch (msg.type) {
@@ -192,10 +195,11 @@
     };
 
     browser.runtime.onMessage.addListener(listener);
-  });
 
-  onDestroy(() => {
-    browser.runtime.onMessage.removeListener(listener);
+    return () => {
+      browser.runtime.onMessage.removeListener(listener);
+      document.removeEventListener("keydown", onKeydown);
+    };
   });
 </script>
 

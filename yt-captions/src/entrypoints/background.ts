@@ -26,22 +26,15 @@ export default defineBackground(() => {
     const msg = message as PanelMessage;
 
     switch (msg.type) {
-      case "INIT":
+      case "OPEN":
         browser.tabs
-          .query({ active: true, currentWindow: true })
+          .query({
+            windowId: msg.windowId,
+            url: "https://www.youtube.com/watch?*",
+          })
           .then(async (tabs) => {
-            if (!tabs[0]) return;
-            const tab = tabs[0];
-            const tabId = tab.id;
-            const url = tab.url ? new URL(tab.url) : null;
-            if (
-              url &&
-              tabId &&
-              url.hostname === "www.youtube.com" &&
-              url.pathname === "watch"
-            ) {
-              postToTab(tabId, { type: "INIT" });
-            }
+            const [ytTab] = tabs;
+            if (ytTab?.id) postToTab(ytTab.id, { type: "INIT" });
           });
         break;
 

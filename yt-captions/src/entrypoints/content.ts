@@ -1,5 +1,9 @@
 import { postToInjected, postToPanel } from "@/messages";
-import type { Caption, InjectedMessage, TabCommand } from "@/messages";
+import type {
+  Caption,
+  InjectedMessage,
+  BackgroundToTabMessage,
+} from "@/messages";
 
 // This type definition is minimal; See https://github.com/lukewarlow/navigation-api-types for complete type definition.
 declare global {
@@ -58,7 +62,7 @@ export default defineContentScript({
 
     // From side panel
     browser.runtime.onMessage.addListener(
-      (message: TabCommand, _sender, sendResponse) => {
+      (message: BackgroundToTabMessage, _sender, sendResponse) => {
         switch (message.type) {
           case "SEEK_VIDEO": {
             const video = document.querySelector("video");
@@ -68,6 +72,16 @@ export default defineContentScript({
             break;
           }
           case "INIT": {
+            console.log(
+              { m: "INIT" },
+              {
+                type: "VIDEO_STATE",
+                captions,
+                videoTitle,
+                hasCaptions,
+                timeMs,
+              },
+            );
             const isVideo = location.pathname === "/watch";
             postToPanel({ type: "VIDEO_CHANGED", isVideo });
             const video = document.querySelector("video");
