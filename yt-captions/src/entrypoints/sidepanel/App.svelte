@@ -5,6 +5,7 @@
   import * as messages from "@/messages";
   import HighlightText from "./HighlightText.svelte";
   import SearchBar from "./SearchBar.svelte";
+  import logger from "@/logger";
 
   type TabData = {
     captions: messages.Caption[];
@@ -24,11 +25,18 @@
     title: null,
     timeMs: -1,
     hasCaptions: false,
-    isLoading: false,
+    isLoading: true,
     showSubtitleHint: false,
   } as const;
 
-  function updateTab(tabId: number, patch: Partial<TabData>) {
+  function updateTab(tabId: number, patch: Partial<TabData> | null) {
+    logger.log("updateTab", patch);
+
+    if (!patch) {
+      tabDataMap.delete(tabId);
+      return;
+    }
+
     const existing = tabDataMap.get(tabId) ?? defaultTabData;
     tabDataMap.set(tabId, { ...existing, ...patch });
   }
@@ -38,7 +46,7 @@
   let videoTitle = $derived(activeTabData?.title ?? null);
   let currentTimeMs = $derived(activeTabData?.timeMs ?? -1);
   let hasCaptions = $derived(activeTabData?.hasCaptions ?? false);
-  let isLoading = $derived(activeTabData?.isLoading ?? false);
+  let isLoading = $derived(activeTabData?.isLoading ?? true);
   let showSubtitleHint = $derived(activeTabData?.showSubtitleHint ?? false);
 
   let activeIndex = $derived.by(() => {
@@ -164,7 +172,9 @@
       if (res?.tabIds?.length) {
         activeYtTabId = [...tabDataMap.entries()].reduce(
           (best, [tabId, data]) =>
-            res.tabIds.includes(tabId) && data.captions.length > 0 && !best.hasCaptions
+            res.tabIds.includes(tabId) &&
+            data.captions.length > 0 &&
+            !best.hasCaptions
               ? { tabId, hasCaptions: true }
               : best,
           { tabId: res.tabIds[0], hasCaptions: false },
@@ -193,11 +203,7 @@
       switch (message.type) {
         case "YT_NAVIGATE":
           clearTimeout(showCaptionHintTimer);
-          tabDataMap.delete(tabId);
-          updateTab(tabId, {
-            hasCaptions: message.isVideo ?? false,
-            isLoading: message.isVideo ?? false,
-          });
+          updateTab(tabId, null);
           break;
         case "VIDEO_STATE": {
           const patch: Partial<TabData> = {};
@@ -222,7 +228,8 @@
                 }
               }, 2500);
             }
-          } else {
+          } else if (message.hasCaptions === false) {
+            // === false: distinguish load completion from missing field
             patch.isLoading = false;
           }
 
