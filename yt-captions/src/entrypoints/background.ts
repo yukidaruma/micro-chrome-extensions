@@ -1,5 +1,5 @@
 import { postToPanel, postToTab } from "@/messages";
-import type { PanelMessage } from "@/messages";
+import type { PanelMessage, SidePanelOpenResponse } from "@/messages";
 
 export default defineBackground(() => {
   browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
@@ -9,7 +9,7 @@ export default defineBackground(() => {
       const tab = await browser.tabs.get(tabId);
       // tab.url is only populated for YouTube tabs (content script host permissions)
       if (tab.url && new URL(tab.url).hostname === "www.youtube.com") {
-        postToPanel({ type: "TAB_ACTIVATED", tabId });
+        postToPanel({ type: "YT_TAB_ACTIVATED", tabId });
         postToTab(tabId, { type: "INIT" });
       }
     } catch {
@@ -26,7 +26,7 @@ export default defineBackground(() => {
     const msg = message as PanelMessage;
 
     switch (msg.type) {
-      case "OPEN":
+      case "SIDE_PANEL_OPEN":
         browser.tabs
           .query({
             windowId: msg.windowId,
@@ -34,9 +34,16 @@ export default defineBackground(() => {
           })
           .then(async (tabs) => {
             const [ytTab] = tabs;
-            if (ytTab?.id) postToTab(ytTab.id, { type: "INIT" });
+            if (ytTab?.id) {
+              postToTab(ytTab.id, { type: "INIT" });
+              sendResponse({
+                destination: "background",
+                type: "YT_TAB_FOUND",
+                tabId: ytTab.id,
+              } satisfies SidePanelOpenResponse);
+            }
           });
-        break;
+        return true; // keep sendResponse alive for async .then()
 
       case "SEEK_VIDEO":
         postToTab(msg.tabId, { type: "SEEK_VIDEO", timeMs: msg.timeMs });

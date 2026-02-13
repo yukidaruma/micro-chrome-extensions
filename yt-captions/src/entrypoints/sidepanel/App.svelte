@@ -2,27 +2,53 @@
   import { onMount } from "svelte";
   import { SvelteMap } from "svelte/reactivity";
   import { copyToClipboard } from "wxt-module-clipboard/client";
-  import { postToBackground } from "@/messages";
-  import type {
-    Caption,
-    ContentMessage,
-    BackgroundToPanelMessage,
-  } from "@/messages";
+  import * as messages from "@/messages";
   import HighlightText from "./HighlightText.svelte";
   import SearchBar from "./SearchBar.svelte";
 
-  type TabData = { captions: Caption[]; title: string };
+  type TabData = {
+    captions: messages.Caption[];
+    title: string | null;
+    timeMs: number;
+    hasCaptions: boolean;
+    isLoading: boolean;
+    showSubtitleHint: boolean;
+  };
 
   let tabDataMap = new SvelteMap<number, TabData>();
-  let activeTabId = $state(-1);
-  let currentTimeMs = $state(-1);
-  let hasCaptions = $state(false); // true: YouTube video with captions, false: YouTube video without captions or non-YouTube page
-  let isLoading = $state(false);
-  let showSubtitleHint = $state(false);
+  let activeYtTabId = $state(-1);
   let showCaptionHintTimer: ReturnType<typeof setTimeout> | undefined;
 
-  let captions = $derived(tabDataMap.get(activeTabId)?.captions ?? []);
-  let videoTitle = $derived(tabDataMap.get(activeTabId)?.title ?? null);
+  const defaultTabData: TabData = {
+    captions: [],
+    title: null,
+    timeMs: -1,
+    hasCaptions: false,
+    isLoading: false,
+    showSubtitleHint: false,
+  } as const;
+
+  function updateTab(tabId: number, patch: Partial<TabData>) {
+    const existing = tabDataMap.get(tabId) ?? defaultTabData;
+    tabDataMap.set(tabId, { ...existing, ...patch });
+
+    console.log(
+      "updateTab",
+      tabId,
+      tabDataMap.get(tabId),
+      existing.title,
+      patch.title,
+      "title" in patch,
+    );
+  }
+
+  let activeTabData = $derived(tabDataMap.get(activeYtTabId));
+  let captions = $derived(activeTabData?.captions ?? []);
+  let videoTitle = $derived(activeTabData?.title ?? null);
+  let currentTimeMs = $derived(activeTabData?.timeMs ?? -1);
+  let hasCaptions = $derived(activeTabData?.hasCaptions ?? false);
+  let isLoading = $derived(activeTabData?.isLoading ?? false);
+  let showSubtitleHint = $derived(activeTabData?.showSubtitleHint ?? false);
 
   let activeIndex = $derived.by(() => {
     if (currentTimeMs < 0 || captions.length === 0) return -1;
@@ -84,8 +110,19 @@
     scrollContainer.scrollTo({ top: target, behavior: "smooth" });
   }
 
-  function onUserScroll() {
-    autoScroll = false;
+  function passiveScrollHandler(node: HTMLElement) {
+    function onUserScroll() {
+      autoScroll = false;
+    }
+
+    node.addEventListener("wheel", onUserScroll, { passive: true });
+    node.addEventListener("touchstart", onUserScroll, { passive: true });
+    return {
+      destroy() {
+        node.removeEventListener("wheel", onUserScroll);
+        node.removeEventListener("touchstart", onUserScroll);
+      },
+    };
   }
 
   $effect(() => {
@@ -107,8 +144,12 @@
   }
 
   function seek(timeMs: number) {
-    currentTimeMs = timeMs;
-    postToBackground({ type: "SEEK_VIDEO", timeMs, tabId: activeTabId });
+    updateTab(activeYtTabId, { timeMs }); // Update local state immediately without waiting for the seek
+    messages.postToBackground({
+      type: "SEEK_VIDEO",
+      timeMs,
+      tabId: activeYtTabId,
+    });
   }
 
   let copied = $state(false);
@@ -122,8 +163,16 @@
     }
   }
 
-  let listener: Parameters<typeof browser.runtime.onMessage.addListener>[0];
   onMount(() => {
+    browser.windows.getCurrent().then(async (win) => {
+      if (win.id == null) return;
+      const res = (await messages.postToBackground({
+        type: "SIDE_PANEL_OPEN",
+        windowId: win.id,
+      })) as messages.SidePanelOpenResponse | undefined;
+      if (res?.tabId) activeYtTabId = res.tabId;
+    });
+
     const onKeydown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "f") {
         e.preventDefault();
@@ -131,62 +180,57 @@
       }
     };
 
-    document.addEventListener("keydown", onKeydown);
-
-    browser.windows.getCurrent().then((win) => {
-      if (win.id != null) postToBackground({ type: "OPEN", windowId: win.id });
-    });
-
-    listener = (message, sender) => {
+    const onMessage = (
+      message: messages.ContentMessage | messages.BackgroundToPanelMessage,
+      sender: Browser.runtime.MessageSender,
+    ) => {
       if (message.destination !== "sidepanel") return;
-      const msg = message;
       const tabId =
-        sender.tab?.id ??
-        (msg as BackgroundToPanelMessage & { tabId: number }).tabId;
+        sender.tab?.id ?? (message as messages.BackgroundToPanelMessage).tabId;
       if (!tabId) return;
 
-      switch (msg.type) {
-        case "VIDEO_CHANGED":
+      switch (message.type) {
+        case "YT_NAVIGATE":
+          clearTimeout(showCaptionHintTimer);
           tabDataMap.delete(tabId);
-          if (tabId === activeTabId) {
-            currentTimeMs = -1;
-            hasCaptions = msg.isVideo ?? false;
-            clearTimeout(showCaptionHintTimer);
-            showSubtitleHint = false;
-            isLoading = msg.isVideo ?? false;
-          }
+          updateTab(tabId, {
+            hasCaptions: message.isVideo ?? false,
+            isLoading: message.isVideo ?? false,
+          });
           break;
         case "VIDEO_STATE": {
-          if (msg.timeMs != null) {
-            if (tabId === activeTabId) {
-              currentTimeMs = msg.timeMs;
-            }
-            break;
+          const patch: Partial<TabData> = {};
+          if (message.timeMs) patch.timeMs = message.timeMs;
+          if (message.title) patch.title = message.title;
+          if (message.captions) {
+            patch.captions = message.captions;
+
+            patch.isLoading = false;
+            patch.showSubtitleHint = false;
+            clearTimeout(showCaptionHintTimer);
           }
-          const existing = tabDataMap.get(tabId);
-          tabDataMap.set(tabId, {
-            captions: msg.captions ?? existing?.captions ?? [],
-            title: msg.videoTitle ?? existing?.title ?? "",
-          });
-          if (tabId === activeTabId) {
-            if (msg.captions) {
-              isLoading = false;
-              clearTimeout(showCaptionHintTimer);
-              showSubtitleHint = false;
-            } else if (msg.hasCaptions === false) {
-              isLoading = false;
-            } else if (msg.hasCaptions && isLoading) {
+
+          if (message.hasCaptions) {
+            const existing = tabDataMap.get(tabId);
+            if (existing?.isLoading) {
               clearTimeout(showCaptionHintTimer);
               showCaptionHintTimer = setTimeout(() => {
-                if (isLoading && captions.length === 0) showSubtitleHint = true;
+                const current = tabDataMap.get(tabId);
+                if (current?.isLoading && current.captions.length === 0) {
+                  updateTab(tabId, { showSubtitleHint: true });
+                }
               }, 2500);
             }
+          } else {
+            patch.isLoading = false;
           }
+
+          console.log("VIDEO_STATE", message);
+          updateTab(tabId, patch);
           break;
         }
-        case "TAB_ACTIVATED":
-          activeTabId = tabId;
-          currentTimeMs = -1;
+        case "YT_TAB_ACTIVATED":
+          activeYtTabId = tabId;
           break;
         case "TAB_REMOVED":
           tabDataMap.delete(tabId);
@@ -194,11 +238,12 @@
       }
     };
 
-    browser.runtime.onMessage.addListener(listener);
+    document.addEventListener("keydown", onKeydown);
+    browser.runtime.onMessage.addListener(onMessage);
 
     return () => {
-      browser.runtime.onMessage.removeListener(listener);
       document.removeEventListener("keydown", onKeydown);
+      browser.runtime.onMessage.removeListener(onMessage);
     };
   });
 </script>
@@ -216,7 +261,7 @@
           class="block w-full min-w-0 truncate text-sm font-semibold text-left cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
           disabled={captions.length === 0}
         >
-          {videoTitle || ""}
+          {videoTitle}
         </button>
         {#if captions.length > 0}
           <div
@@ -274,8 +319,7 @@
 
   <div
     bind:this={scrollContainer}
-    onwheel={onUserScroll}
-    ontouchstart={onUserScroll}
+    use:passiveScrollHandler
     class="flex-1 overflow-y-auto p-2"
   >
     {#if captions.length === 0 && !isLoading}
@@ -333,9 +377,9 @@
               </p>
               <button
                 onclick={() =>
-                  postToBackground({
+                  messages.postToBackground({
                     type: "TOGGLE_SUBTITLES_ON",
-                    tabId: activeTabId,
+                    tabId: activeYtTabId,
                   })}
                 class="mt-2 cursor-pointer text-xs text-blue-600 dark:text-blue-400 underline underline-offset-2 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
               >
@@ -354,7 +398,6 @@
         {@const isCurrentMatch =
           searchQuery && matchIndices[currentMatchPos] === i}
         <li
-          bind:this={captionEls[i]}
           class={{
             "ring-2 ring-inset ring-blue-400": isCurrentMatch,
           }}

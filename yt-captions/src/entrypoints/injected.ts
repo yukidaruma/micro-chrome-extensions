@@ -31,7 +31,7 @@ export default defineUnlistedScript(() => {
         data.captions?.playerCaptionsTracklistRenderer?.captionTracks;
       postToContent({
         type: "VIDEO_STATE",
-        videoTitle,
+        title: videoTitle,
         hasCaptions: !!tracks && tracks.length > 0,
         relayToSidePanel: true,
       });

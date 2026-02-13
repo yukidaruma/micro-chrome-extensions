@@ -12,7 +12,7 @@ export type InjectedMessage = {
   destination: "content";
   relayToSidePanel?: boolean;
   type: "VIDEO_STATE";
-  videoTitle?: string;
+  title?: string;
   hasCaptions?: boolean;
   captions?: Caption[];
   timeMs?: number;
@@ -22,26 +22,33 @@ export type InjectedMessage = {
 export type ContentMessage = { destination: "sidepanel" } & (
   | {
       type: "VIDEO_STATE";
-      videoTitle?: string | null;
+      title?: string;
       hasCaptions?: boolean;
       captions?: Caption[];
       timeMs?: number;
     }
-  | { type: "VIDEO_CHANGED"; isVideo: boolean }
+  | { type: "YT_NAVIGATE"; isVideo: boolean }
 );
 
 // browser.runtime.sendMessage: sidepanel → background
 export type PanelMessage = { destination: "background" } & (
-  | { type: "OPEN"; windowId: number }
+  | { type: "SIDE_PANEL_OPEN"; windowId: number }
   | { type: "SEEK_VIDEO"; timeMs: number; tabId: number }
   | { type: "TOGGLE_SUBTITLES_ON"; tabId: number }
 );
 
 // browser.runtime.sendMessage: background → sidepanel
 export type BackgroundToPanelMessage = { destination: "sidepanel" } & (
-  | { type: "TAB_ACTIVATED"; tabId: number }
+  | { type: "YT_TAB_ACTIVATED"; tabId: number }
   | { type: "TAB_REMOVED"; tabId: number }
 );
+
+// sendResponse: background → sidepanel (response to OPEN)
+export type SidePanelOpenResponse = {
+  destination: "background";
+  type: "YT_TAB_FOUND";
+  tabId?: number;
+};
 
 // browser.tabs.sendMessage: background → content
 export type BackgroundToTabMessage =

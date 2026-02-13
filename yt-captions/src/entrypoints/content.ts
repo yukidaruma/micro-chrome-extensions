@@ -16,7 +16,7 @@ declare global {
 
 export default defineContentScript({
   runAt: "document_start",
-  matches: ["*://www.youtube.com/*"],
+  matches: ["*://www.youtube.com/*"], // Match all pages since YouTube is a SPA
   async main() {
     console.log("Content script loaded.");
 
@@ -35,7 +35,7 @@ export default defineContentScript({
       captions = [];
       hasCaptions = false;
 
-      postToPanel({ type: "VIDEO_CHANGED", isVideo });
+      postToPanel({ type: "YT_NAVIGATE", isVideo });
     }
 
     onNavigation();
@@ -47,14 +47,18 @@ export default defineContentScript({
       if (msg?.destination !== "content") return;
 
       if (msg.relayToSidePanel) {
-        const { destination, relayToSidePanel: relay, ...body } = msg;
+        const {
+          destination: _destination,
+          relayToSidePanel: relay,
+          ...body
+        } = msg;
         postToPanel(body);
       }
 
       switch (msg.type) {
         case "VIDEO_STATE":
           if (msg.captions) captions = msg.captions;
-          if (msg.videoTitle) videoTitle = msg.videoTitle;
+          if (msg.title) videoTitle = msg.title;
           if (msg.hasCaptions != null) hasCaptions = msg.hasCaptions;
           break;
       }
@@ -72,24 +76,14 @@ export default defineContentScript({
             break;
           }
           case "INIT": {
-            console.log(
-              { m: "INIT" },
-              {
-                type: "VIDEO_STATE",
-                captions,
-                videoTitle,
-                hasCaptions,
-                timeMs,
-              },
-            );
             const isVideo = location.pathname === "/watch";
-            postToPanel({ type: "VIDEO_CHANGED", isVideo });
+            postToPanel({ type: "YT_NAVIGATE", isVideo });
             const video = document.querySelector("video");
             const timeMs = video ? video.currentTime * 1000 : undefined;
             postToPanel({
               type: "VIDEO_STATE",
               captions,
-              videoTitle,
+              title: videoTitle!,
               hasCaptions,
               timeMs,
             });
