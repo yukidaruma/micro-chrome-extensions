@@ -74,8 +74,6 @@ export default defineContentScript({
             break;
           }
           case "INIT": {
-            const isVideo = location.pathname === "/watch";
-            postToPanel({ type: "YT_NAVIGATE", isVideo });
             const video = document.querySelector("video");
             const timeMs = video ? video.currentTime * 1000 : undefined;
             postToPanel({
@@ -85,7 +83,8 @@ export default defineContentScript({
               hasCaptions,
               timeMs,
             });
-            break;
+            sendResponse(true);
+            return;
           }
           case "TOGGLE_SUBTITLES_ON":
             postToInjected({ type: "TOGGLE_SUBTITLES_ON" });

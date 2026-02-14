@@ -31,7 +31,7 @@
   } as const;
 
   function updateTabData(tabId: number, patch: Partial<TabData> | null) {
-    logger.log("updateTabData", patch);
+    logger.log(`updateTabData(${tabId})`, patch);
 
     if (!patch) {
       tabDataMap.delete(tabId);
@@ -165,23 +165,12 @@
   }
 
   onMount(() => {
-    browser.windows.getCurrent().then(async (win) => {
+    browser.windows.getCurrent().then((win) => {
       if (win.id == null) return;
-      const res = (await messages.postToBackground({
+      messages.postToBackground({
         type: "SIDE_PANEL_OPEN",
         windowId: win.id,
-      })) as messages.SidePanelOpenResponse | undefined;
-      if (res?.tabIds?.length) {
-        activeYtTabId = [...tabDataMap.entries()].reduce(
-          (best, [tabId, data]) =>
-            res.tabIds.includes(tabId) &&
-            data.captions.length > 0 &&
-            !best.hasCaptions
-              ? { tabId, hasCaptions: true }
-              : best,
-          { tabId: res.tabIds[0], hasCaptions: false },
-        ).tabId;
-      }
+      });
     });
 
     const onKeydown = (e: KeyboardEvent) => {
@@ -196,10 +185,25 @@
       sender: Browser.runtime.MessageSender,
     ) => {
       if (message.destination !== "sidepanel") return;
-      const tabId =
-        sender.tab?.id ?? (message as messages.BackgroundToPanelMessage).tabId;
-      if (!tabId) return;
 
+      if (message.type === "TAB_ACTIVATED") {
+        // tabIds are scored by background.ts (active > /watch).
+        // On ties (i.e. switching to a non-YT tab with multiple inactive /watch tabs),
+        // prioritize a tab that already has captions loaded.
+        const { tabIds } = message;
+        let best = tabIds[0] ?? -1;
+        for (const id of tabIds) {
+          if (tabDataMap.has(id)) {
+            best = id;
+            if (tabDataMap.get(id)!.captions.length) break;
+          }
+        }
+        activeYtTabId = best;
+        return;
+      }
+
+      const tabId = sender.tab?.id;
+      if (!tabId) return;
       if (activeYtTabId < 0) activeYtTabId = tabId;
 
       switch (message.type) {
@@ -239,9 +243,6 @@
           updateTabData(tabId, patch);
           break;
         }
-        case "YT_TAB_ACTIVATED":
-          activeYtTabId = tabId;
-          break;
         case "TAB_REMOVED":
           tabDataMap.delete(tabId);
           break;

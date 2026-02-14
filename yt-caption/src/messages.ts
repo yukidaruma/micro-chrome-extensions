@@ -40,14 +40,9 @@ export type PanelMessage = { destination: "background" } & (
 
 // browser.runtime.sendMessage: background -> sidepanel
 export type BackgroundToPanelMessage = { destination: "sidepanel" } & (
-  | { type: "YT_TAB_ACTIVATED"; tabId: number }
+  | { type: "TAB_ACTIVATED"; tabIds: number[] }
   | { type: "TAB_REMOVED"; tabId: number }
 );
-
-// sendResponse: background -> sidepanel (response to OPEN)
-export type SidePanelOpenResponse = {
-  tabIds: number[];
-};
 
 // browser.tabs.sendMessage: background -> content
 export type BackgroundToTabMessage =
