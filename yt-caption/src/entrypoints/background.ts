@@ -63,8 +63,13 @@ export default defineBackground(() => {
     messages.postToPanel({ type: "TAB_REMOVED", tabId });
     activateYtTabs(windowId);
   });
-  browser.sidePanel.onOpened.addListener(({ windowId }) => {
-    activateYtTabs(windowId);
+  browser.sidePanel.onOpened.addListener(async ({ windowId }) => {
+    const allWindows = await browser.windows.getAll();
+    for (const win of allWindows) {
+      if (win.id != null && win.id !== windowId) {
+        browser.sidePanel.close({ windowId: win.id });
+      }
+    }
   });
 
   browser.runtime.onMessage.addListener((message, sender, _sendResponse) => {
