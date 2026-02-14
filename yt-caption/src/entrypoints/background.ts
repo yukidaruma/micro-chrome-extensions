@@ -9,6 +9,8 @@ export default defineBackground(() => {
    * @param restoreAll - Restore all /watch tabs so they sync state to the panel.
    */
   async function activateYtTabs(restoreState = false) {
+    let restoring = false;
+
     const tabs = await browser.tabs.query({
       url: "https://www.youtube.com/*",
     });
@@ -28,21 +30,24 @@ export default defineBackground(() => {
     const tabIds = sorted
       .filter((t) => score(t) === topScore)
       .flatMap((t) => (t.id ? [t.id] : []));
-    if (tabIds.length > 0) {
-      if (restoreState) {
-        const watchTabs = sorted.filter(
-          (t) => t.id && t.url && new URL(t.url).pathname === "/watch",
+    if (tabIds.length > 0 && restoreState) {
+      restoring = true;
+      const watchTabs = sorted.filter(
+        (t) => t.id && t.url && new URL(t.url).pathname === "/watch",
+      );
+      if (watchTabs.length > 0) {
+        await Promise.all(
+          watchTabs.map((t) =>
+            messages.postToTab(t.id!, { type: "RESTORE_STATE" }),
+          ),
         );
-        if (watchTabs.length > 0) {
-          await Promise.all(
-            watchTabs.map((t) =>
-              messages.postToTab(t.id!, { type: "RESTORE_STATE" }),
-            ),
-          );
-        }
       }
     }
-    return messages.postToPanel({ type: "TAB_ACTIVATED", tabIds });
+    return messages.postToPanel({
+      type: "TAB_ACTIVATED",
+      tabIds,
+      restoring,
+    });
   }
 
   // Tab closing has two cases:

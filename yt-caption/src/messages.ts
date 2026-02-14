@@ -42,7 +42,7 @@ export type PanelMessage = { destination: "background" } & (
 
 // browser.runtime.sendMessage: background -> sidepanel
 export type BackgroundToPanelMessage = { destination: "sidepanel" } & (
-  | { type: "TAB_ACTIVATED"; tabIds: number[] }
+  | { type: "TAB_ACTIVATED"; tabIds: number[]; restoring: boolean }
   | { type: "TAB_REMOVED"; tabId: number }
 );
 
