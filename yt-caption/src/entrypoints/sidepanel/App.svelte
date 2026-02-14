@@ -49,7 +49,6 @@
   let videoTitle = $derived(activeTabData?.title ?? null);
   let currentTimeMs = $derived(activeTabData?.timeMs ?? -1);
   let isVideo = $derived(activeTabData?.isVideo ?? false);
-  let hasCaptions = $derived(activeTabData?.hasCaptions ?? false);
   let isLoading = $derived(activeTabData?.isLoading ?? true);
   let showSubtitleHint = $derived(activeTabData?.showSubtitleHint ?? false);
 
@@ -366,7 +365,7 @@
       </div>
     {/if}
 
-    {#if captions.length === 0 && isLoading}
+    {#if captions.length === 0 && isVideo && isLoading}
       <div class="relative">
         <ul
           class="[&>li]:border-b [&>li]:border-b-gray-100 dark:[&>li]:border-b-neutral-800"
