@@ -10,9 +10,11 @@ export default defineBackground(() => {
    * Query YouTube tabs in a window, restore the best ones, and notify the panel.
    * @param restoreAll - Restore all /watch tabs so they sync state to the panel.
    */
-  async function activateYtTabs(windowId: number, initAll = false) {
+  async function activateYtTabs(windowId?: number, restoreState = false) {
     const tabs = await browser.tabs.query({
       windowId,
+      // If windowId is not available (on YOUTUBE_LEAVE), use currentWindow instead of windowId
+      currentWindow: !windowId ? true : undefined,
       url: "https://www.youtube.com/*",
     });
     // 3: active (current tab), /watch
@@ -27,11 +29,12 @@ export default defineBackground(() => {
 
     // On a tie, send all candidates so the panel can prioritize one with existing caption data.
     // Practically, ties only occur at score 1 (multiple inactive /watch tabs).
+    // For tabs of same score, leftmost tabs are prioritized.
     const tabIds = sorted
       .filter((t) => score(t) === topScore)
       .flatMap((t) => (t.id ? [t.id] : []));
     if (tabIds.length > 0) {
-      if (initAll) {
+      if (restoreState) {
         const watchTabs = sorted.filter(
           (t) => t.id && t.url && new URL(t.url).pathname === "/watch",
         );
@@ -51,7 +54,7 @@ export default defineBackground(() => {
 
   // Tab closing has two cases:
   // 1. Closing the active tab - Chrome activates another tab, so onActivated fires.
-  // 2. Closing a background tab - onActivated does NOT fire, so onRemoved handles it.
+  // 2. Closing a background tab - onActivated does NOT fire, so onRemoved needs to fire it.
   browser.tabs.onActivated.addListener(async ({ windowId }) => {
     try {
       await activateYtTabs(windowId);
@@ -72,6 +75,10 @@ export default defineBackground(() => {
     const msg = message as messages.PanelMessage;
 
     switch (msg.type) {
+      case "YOUTUBE_LEAVE":
+        activateYtTabs(msg.windowId);
+        break;
+
       case "SIDE_PANEL_OPEN":
         activateYtTabs(msg.windowId, true);
         break;

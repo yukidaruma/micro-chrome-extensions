@@ -167,11 +167,11 @@
   }
 
   onMount(() => {
-    browser.windows.getCurrent().then((win) => {
-      if (win.id == null) return;
+    browser.windows.getCurrent().then((window) => {
+      if (window.id == null) return;
       messages.postToBackground({
         type: "SIDE_PANEL_OPEN",
-        windowId: win.id,
+        windowId: window.id,
       });
     });
 

@@ -32,7 +32,13 @@ export default defineContentScript({
       const isVideo = testIsVideo();
 
       messages.postToInjected({ type: "RESET_STATE" });
-      messages.postToPanel({ type: "YT_NAVIGATE", isVideo });
+      if (isVideo) {
+        messages.postToBackground({
+          type: "YOUTUBE_LEAVE",
+        });
+      } else {
+        messages.postToPanel({ type: "YT_NAVIGATE", isVideo: false });
+      }
     }
 
     onNavigation();
@@ -45,7 +51,9 @@ export default defineContentScript({
 
     // Navigating away from YouTube unloads the content script; notify panel before leaving.
     ctx.addEventListener(window, "pagehide", () => {
-      messages.postToPanel({ type: "YT_NAVIGATE", isVideo: false });
+      messages.postToBackground({
+        type: "YOUTUBE_LEAVE",
+      });
     });
 
     // Handle messages from injected script
