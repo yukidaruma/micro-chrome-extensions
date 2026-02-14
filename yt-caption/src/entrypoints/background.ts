@@ -4,17 +4,12 @@ import * as messages from "@/messages";
 export default defineBackground(() => {
   logger.log("Content script loaded.");
 
-  browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
-
   /**
    * Query YouTube tabs in a window, restore the best ones, and notify the panel.
    * @param restoreAll - Restore all /watch tabs so they sync state to the panel.
    */
-  async function activateYtTabs(windowId?: number, restoreState = false) {
+  async function activateYtTabs(restoreState = false) {
     const tabs = await browser.tabs.query({
-      windowId,
-      // If windowId is not available (on YOUTUBE_LEAVE), use currentWindow instead of windowId
-      currentWindow: !windowId ? true : undefined,
       url: "https://www.youtube.com/*",
     });
     // 3: active (current tab), /watch
@@ -53,23 +48,28 @@ export default defineBackground(() => {
   // Tab closing has two cases:
   // 1. Closing the active tab - Chrome activates another tab, so onActivated fires.
   // 2. Closing a background tab - onActivated does NOT fire, so onRemoved needs to fire it.
-  browser.tabs.onActivated.addListener(({ windowId }) => {
-    activateYtTabs(windowId);
+  browser.tabs.onActivated.addListener(() => {
+    activateYtTabs();
   });
-  browser.tabs.onCreated.addListener(({ windowId }) => {
-    activateYtTabs(windowId);
+  browser.tabs.onCreated.addListener(() => {
+    activateYtTabs();
   });
-  browser.tabs.onRemoved.addListener((tabId, { windowId }) => {
+  browser.tabs.onRemoved.addListener((tabId, _removeInfo) => {
     messages.postToPanel({ type: "TAB_REMOVED", tabId });
-    activateYtTabs(windowId);
+    activateYtTabs();
   });
+
+  browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
   browser.sidePanel.onOpened.addListener(async ({ windowId }) => {
+    // Close this extension's side panel in other windows (does not affect other extensions' panels)
     const allWindows = await browser.windows.getAll();
     for (const win of allWindows) {
       if (win.id != null && win.id !== windowId) {
         browser.sidePanel.close({ windowId: win.id });
       }
     }
+
+    activateYtTabs(true);
   });
 
   browser.runtime.onMessage.addListener((message, sender, _sendResponse) => {

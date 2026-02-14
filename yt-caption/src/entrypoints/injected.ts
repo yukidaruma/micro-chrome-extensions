@@ -25,6 +25,7 @@ export default defineUnlistedScript(() => {
 
   let videoTitle: string | null = null;
   let hasCaptions = false;
+  let isLoading = true;
   let captions: messages.Caption[] = [];
   let lastCaptionIndex = -1;
 
@@ -37,12 +38,13 @@ export default defineUnlistedScript(() => {
       const tracks =
         data.captions?.playerCaptionsTracklistRenderer?.captionTracks;
       hasCaptions = !!tracks && tracks.length > 0;
+      isLoading = hasCaptions;
+
       messages.postToContent({
         type: "VIDEO_STATE",
         title: videoTitle,
-        isVideo: true,
         hasCaptions,
-        isLoading: hasCaptions ? true : false,
+        isLoading,
         relayToSidePanel: true,
       });
     }
@@ -86,10 +88,12 @@ export default defineUnlistedScript(() => {
         if (parsed.length > 0) {
           captions = parsed;
           lastCaptionIndex = -1;
+          isLoading = false;
+
           messages.postToContent({
             type: "VIDEO_STATE",
             captions,
-            isLoading: false,
+            isLoading,
             relayToSidePanel: true,
           });
         }
@@ -157,22 +161,23 @@ export default defineUnlistedScript(() => {
       case "RESET_STATE":
         videoTitle = null;
         hasCaptions = false;
+        isLoading = true;
         captions = [];
         lastCaptionIndex = -1;
         break;
 
       case "RESTORE_STATE": {
-        const isVideo = location.pathname === "/watch";
         const video = document.querySelector("video");
         const msg: Parameters<typeof messages.postToContent>[0] = {
           type: "VIDEO_STATE",
-          isVideo,
+          isVideo: location.pathname === "/watch",
+          isLoading,
+          captions,
           hasCaptions,
           relayToSidePanel: true,
+          title: videoTitle ?? undefined,
+          timeMs: video ? Math.round(video.currentTime * 1000) : undefined,
         };
-        if (videoTitle) msg.title = videoTitle;
-        if (captions.length > 0) msg.captions = captions;
-        if (video) msg.timeMs = Math.round(video.currentTime * 1000);
         messages.postToContent(msg);
         break;
       }
