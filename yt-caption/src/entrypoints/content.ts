@@ -1,3 +1,5 @@
+/// <reference types="navigation-api-types" />
+
 import logger from "@/logger";
 import { postToInjected, postToPanel } from "@/messages";
 import type {
@@ -6,19 +8,10 @@ import type {
   BackgroundToTabMessage,
 } from "@/messages";
 
-// This type definition is minimal; See https://github.com/lukewarlow/navigation-api-types for complete type definition.
-declare global {
-  interface Window {
-    navigation: {
-      addEventListener(type: "currententrychange", listener: () => void): void;
-    };
-  }
-}
-
 export default defineContentScript({
   runAt: "document_start",
   matches: ["*://www.youtube.com/*"], // Match all pages since YouTube is a SPA
-  async main() {
+  async main(ctx) {
     logger.log("Content script loaded.");
 
     let captions: Caption[] = [];
@@ -40,10 +33,14 @@ export default defineContentScript({
     }
 
     onNavigation();
-    window.navigation.addEventListener("currententrychange", onNavigation);
 
     // From injected script
-    window.addEventListener("message", (event) => {
+    ctx.addEventListener(
+      window.navigation!,
+      "currententrychange",
+      onNavigation,
+    );
+    ctx.addEventListener(window, "message", (event) => {
       const msg = event.data as InjectedMessage | undefined;
       if (msg?.destination !== "content") return;
 
