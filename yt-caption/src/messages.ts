@@ -5,6 +5,7 @@ export type Caption = { startMs: number; text: string };
 
 type VideoState = {
   type: "VIDEO_STATE";
+  tabId?: number;
   isLoading?: boolean;
   isVideo?: boolean;
   title?: string;

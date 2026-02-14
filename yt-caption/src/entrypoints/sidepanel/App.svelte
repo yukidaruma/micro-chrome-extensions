@@ -255,7 +255,6 @@
             }
           }
 
-          logger.debug(message);
           updateTabData(tabId, patch);
           break;
         }

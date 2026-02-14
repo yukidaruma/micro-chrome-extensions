@@ -32,11 +32,12 @@ export default defineContentScript({
       const isVideo = testIsVideo();
 
       messages.postToInjected({ type: "RESET_STATE" });
-      messages.postToPanel({ type: "YT_NAVIGATE", isVideo });
       if (isInitialNavigation) {
         messages.postToBackground({
           type: "YOUTUBE_RELOAD",
         });
+      } else {
+        messages.postToPanel({ type: "YT_NAVIGATE", isVideo });
       }
     }
 
