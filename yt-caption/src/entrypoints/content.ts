@@ -22,7 +22,7 @@ export default defineContentScript({
       const params = new URLSearchParams(location.search);
       return params.get("v") ?? "";
     }
-    function onNavigation() {
+    function onNavigation(isInitialNavigation?: boolean) {
       const key = videoKey();
       logger.log("onNavigation", { lastVideoKey, key });
 
@@ -32,16 +32,15 @@ export default defineContentScript({
       const isVideo = testIsVideo();
 
       messages.postToInjected({ type: "RESET_STATE" });
-      if (isVideo) {
+      messages.postToPanel({ type: "YT_NAVIGATE", isVideo });
+      if (isInitialNavigation) {
         messages.postToBackground({
           type: "YOUTUBE_LEAVE",
         });
-      } else {
-        messages.postToPanel({ type: "YT_NAVIGATE", isVideo: false });
       }
     }
 
-    onNavigation();
+    onNavigation(true);
 
     ctx.addEventListener(
       window.navigation!,
