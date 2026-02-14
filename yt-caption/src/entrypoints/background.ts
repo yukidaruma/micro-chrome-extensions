@@ -27,9 +27,14 @@ export default defineBackground(() => {
     // On a tie, send all candidates so the panel can prioritize one with existing caption data.
     // Practically, ties only occur at score 1 (multiple inactive /watch tabs).
     // For tabs of same score, leftmost tabs are prioritized.
-    const tabIds = sorted
-      .filter((t) => score(t) === topScore)
-      .flatMap((t) => (t.id ? [t.id] : []));
+    const topTabs = sorted.filter((t) => score(t) === topScore);
+    const tabIds = topTabs.flatMap((t) => (t.id ? [t.id] : []));
+    const isVideoMap: Record<number, boolean> = {};
+    for (const t of topTabs) {
+      if (t.id != null) {
+        isVideoMap[t.id] = !!(t.url && new URL(t.url).pathname === "/watch");
+      }
+    }
     if (tabIds.length > 0 && restoreState) {
       restoring = true;
       const watchTabs = sorted.filter(
@@ -47,6 +52,7 @@ export default defineBackground(() => {
       type: "TAB_ACTIVATED",
       tabIds,
       restoring,
+      isVideoMap,
     });
   }
 
@@ -82,11 +88,7 @@ export default defineBackground(() => {
 
     switch (msg.type) {
       case "YOUTUBE_RELOAD":
-        messages.postToPanel({
-          type: "VIDEO_STATE",
-          isVideo: true,
-          isLoading: true,
-        });
+        activateYtTabs();
         break;
 
       case "YOUTUBE_LEAVE":

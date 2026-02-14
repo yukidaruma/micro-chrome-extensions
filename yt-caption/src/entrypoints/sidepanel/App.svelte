@@ -186,7 +186,7 @@
       if (message.destination !== "sidepanel") return;
 
       if (message.type === "TAB_ACTIVATED") {
-        const { tabIds, restoring } = message;
+        const { tabIds, restoring, isVideoMap } = message;
         if (tabIds.length === 0) {
           activeYtTabId = -1;
           return;
@@ -206,8 +206,9 @@
 
         // When restoring, VIDEO_STATE from RESTORE_STATE may not have arrived yet.
         // Initialize with loading state to avoid flashing "No Video Detected".
-        if (restoring && !tabDataMap.has(best)) {
-          updateTabData(best, { ...defaultTabData, isVideo: true });
+        if (!tabDataMap.has(best)) {
+          const isVideo = isVideoMap[best] ?? false;
+          updateTabData(best, { ...defaultTabData, isVideo, isLoading: isVideo });
         }
         return;
       }
