@@ -42,7 +42,7 @@ export default defineBackground(() => {
         }
       }
     }
-    messages.postToPanel({ type: "TAB_ACTIVATED", tabIds });
+    return messages.postToPanel({ type: "TAB_ACTIVATED", tabIds });
   }
 
   // Tab closing has two cases:
@@ -71,7 +71,7 @@ export default defineBackground(() => {
     }
   });
 
-  browser.runtime.onMessage.addListener((message, sender, _sendResponse) => {
+  browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.destination !== "background") return;
     const msg = message as messages.PanelMessage;
 
@@ -89,8 +89,8 @@ export default defineBackground(() => {
         break;
 
       case "SIDE_PANEL_OPEN":
-        activateYtTabs(true);
-        break;
+        activateYtTabs(true).then(sendResponse);
+        return true; // keep message channel open
 
       case "SEEK_VIDEO":
       case "TOGGLE_SUBTITLES_ON": {
