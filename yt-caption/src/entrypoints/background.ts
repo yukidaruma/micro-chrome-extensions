@@ -61,15 +61,14 @@ export default defineBackground(() => {
 
   browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
   browser.sidePanel.onOpened.addListener(async ({ windowId }) => {
-    // Close this extension's side panel in other windows (does not affect other extensions' panels)
+    // Close our side panel in other windows (doesn't affect other extensions).
+    // State restore is done in Svelte onMount to avoid race condition.
     const allWindows = await browser.windows.getAll();
     for (const win of allWindows) {
       if (win.id != null && win.id !== windowId) {
         browser.sidePanel.close({ windowId: win.id });
       }
     }
-
-    activateYtTabs(true);
   });
 
   browser.runtime.onMessage.addListener((message, sender, _sendResponse) => {
@@ -87,6 +86,10 @@ export default defineBackground(() => {
 
       case "YOUTUBE_LEAVE":
         activateYtTabs();
+        break;
+
+      case "SIDE_PANEL_OPEN":
+        activateYtTabs(true);
         break;
 
       case "SEEK_VIDEO":

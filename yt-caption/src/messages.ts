@@ -34,9 +34,10 @@ export type ContentMessage = { destination: "sidepanel" } & (
 // browser.runtime.sendMessage: sidepanel -> background
 export type PanelMessage = { destination: "background" } & (
   | { type: "SEEK_VIDEO"; timeMs: number; tabId: number }
+  | { type: "SIDE_PANEL_OPEN" }
   | { type: "TOGGLE_SUBTITLES_ON"; tabId: number }
-  | { type: "YOUTUBE_LEAVE"; windowId?: never }
-  | { type: "YOUTUBE_RELOAD"; windowId?: never }
+  | { type: "YOUTUBE_LEAVE" }
+  | { type: "YOUTUBE_RELOAD" }
 );
 
 // browser.runtime.sendMessage: background -> sidepanel

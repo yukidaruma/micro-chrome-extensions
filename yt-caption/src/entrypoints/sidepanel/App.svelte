@@ -167,6 +167,10 @@
   }
 
   onMount(() => {
+    messages.postToBackground({
+      type: "SIDE_PANEL_OPEN",
+    });
+
     const onKeydown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "f") {
         e.preventDefault();
