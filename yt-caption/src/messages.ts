@@ -16,7 +16,7 @@ type VideoState = {
 
 // Strip destination for sender function parameters
 export type Body<T> = T extends { destination: string }
-  ? Omit<T, "destination">
+  ? Omit<T, "destination" | "windowId">
   : never;
 
 // window.postMessage: injected -> content
@@ -26,7 +26,8 @@ export type InjectedMessage = {
 } & VideoState;
 
 // browser.runtime.sendMessage: content -> sidepanel
-export type ContentMessage = { destination: "sidepanel" } & (
+
+export type ContentMessage = { destination: "sidepanel"; windowId: number } & (
   | VideoState
   | { type: "YT_NAVIGATE"; isVideo: boolean }
 );
@@ -40,7 +41,10 @@ export type PanelMessage = { destination: "background" } & (
 );
 
 // browser.runtime.sendMessage: background -> sidepanel
-export type BackgroundToPanelMessage = { destination: "sidepanel" } & (
+export type BackgroundToPanelMessage = {
+  destination: "sidepanel";
+  windowId: number;
+} & (
   | { type: "TAB_ACTIVATED"; tabIds: number[] }
   | { type: "TAB_REMOVED"; tabId: number }
 );
@@ -92,7 +96,7 @@ export function postToPanel(
 ) {
   logger.debug("-> sidepanel", message);
   return browser.runtime
-    .sendMessage({ windowId, ...message, destination: "sidepanel" })
+    .sendMessage({ ...message, windowId, destination: "sidepanel" })
     .catch(() => {});
 }
 
