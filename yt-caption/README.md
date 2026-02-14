@@ -1,4 +1,4 @@
-# YT Caption Panel
+# <img src="./src/assets/icon.svg" width="28" height="28"> YT Caption Panel
 
 <center><img width="400" src="./promo-1280x800.svg"></center>
 

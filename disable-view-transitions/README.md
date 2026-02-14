@@ -1,4 +1,4 @@
-# Disable View Transitions
+# <img src="./assets/icon.svg" width="28" height="28"> Disable View Transitions
 
 <center><img width="400" src="./promo-1280x800.svg"></center>
 
