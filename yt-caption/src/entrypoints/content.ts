@@ -43,7 +43,7 @@ export default defineContentScript({
 
     // Navigating away from YouTube unloads the content script; notify panel before leaving.
     ctx.addEventListener(window, "pagehide", () => {
-      messages.postToPanel({ type: "YT_NAVIGATE", isVideo: testIsVideo() });
+      messages.postToPanel({ type: "YT_NAVIGATE", isVideo: false });
     });
 
     // Handle messages from injected script
