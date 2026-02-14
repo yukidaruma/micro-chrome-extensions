@@ -25,11 +25,15 @@ export default defineUnlistedScript(() => {
   logger.log("Injected script loaded.");
 
   let videoTitle: string | null = null;
+  let activeCaptions: { startMs: number }[] = [];
+  let lastCaptionIndex = -1;
 
   /** Check player response for caption availability and extract title */
   function checkPlayerResponse(data: PlayerResponse) {
     if (data.videoDetails?.title) {
       videoTitle = data.videoDetails.title;
+      activeCaptions = [];
+      lastCaptionIndex = -1;
       const tracks =
         data.captions?.playerCaptionsTracklistRenderer?.captionTracks;
       postToContent({
@@ -77,6 +81,8 @@ export default defineUnlistedScript(() => {
           .filter((c) => c.text.trim().length > 0);
 
         if (captions.length > 0) {
+          activeCaptions = captions;
+          lastCaptionIndex = -1;
           postToContent({
             type: "VIDEO_STATE",
             captions,
@@ -156,14 +162,25 @@ export default defineUnlistedScript(() => {
     }
   });
 
-  // Track video time and send throttled updates via postMessage
-  let lastSentTime = 0;
+  // Track video time and send updates only when the active caption changes
+  function findCaptionIndex(timeMs: number): number {
+    if (activeCaptions.length === 0) return -1;
+    let idx = -1;
+    for (let i = activeCaptions.length - 1; i >= 0; i--) {
+      if (activeCaptions[i].startMs <= timeMs) {
+        idx = i;
+        break;
+      }
+    }
+    return idx;
+  }
+
   function attachTimeTracking(video: HTMLVideoElement) {
     video.addEventListener("timeupdate", () => {
-      const now = Date.now();
-      if (now - lastSentTime < 100) return;
-      lastSentTime = now;
       const timeMs = Math.round(video.currentTime * 1000);
+      const idx = findCaptionIndex(timeMs);
+      if (idx === lastCaptionIndex) return;
+      lastCaptionIndex = idx;
       postToContent({
         type: "VIDEO_STATE",
         timeMs,
