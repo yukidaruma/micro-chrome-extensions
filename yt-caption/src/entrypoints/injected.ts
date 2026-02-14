@@ -1,6 +1,5 @@
 import logger from "@/logger";
-import { postToContent } from "@/messages";
-import type { InjectedCommand } from "@/messages";
+import * as messages from "@/messages";
 
 type PlayerResponse = {
   captions?: {
@@ -25,21 +24,23 @@ export default defineUnlistedScript(() => {
   logger.log("Injected script loaded.");
 
   let videoTitle: string | null = null;
-  let activeCaptions: { startMs: number }[] = [];
+  let hasCaptions = false;
+  let captions: messages.Caption[] = [];
   let lastCaptionIndex = -1;
 
   /** Check player response for caption availability and extract title */
   function checkPlayerResponse(data: PlayerResponse) {
     if (data.videoDetails?.title) {
       videoTitle = data.videoDetails.title;
-      activeCaptions = [];
+      captions = [];
       lastCaptionIndex = -1;
       const tracks =
         data.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-      postToContent({
+      hasCaptions = !!tracks && tracks.length > 0;
+      messages.postToContent({
         type: "VIDEO_STATE",
         title: videoTitle,
-        hasCaptions: !!tracks && tracks.length > 0,
+        hasCaptions,
         relayToSidePanel: true,
       });
     }
@@ -72,7 +73,7 @@ export default defineUnlistedScript(() => {
         const root = body as TimedTextResponse;
         if (!root.events) return;
 
-        const captions = root.events
+        const parsed = root.events
           .filter((e) => e.segs && e.segs.length > 0)
           .map((e) => ({
             startMs: e.tStartMs,
@@ -80,10 +81,10 @@ export default defineUnlistedScript(() => {
           }))
           .filter((c) => c.text.trim().length > 0);
 
-        if (captions.length > 0) {
-          activeCaptions = captions;
+        if (parsed.length > 0) {
+          captions = parsed;
           lastCaptionIndex = -1;
-          postToContent({
+          messages.postToContent({
             type: "VIDEO_STATE",
             captions,
             relayToSidePanel: true,
@@ -146,10 +147,33 @@ export default defineUnlistedScript(() => {
 
   // Listen for commands from content script
   window.addEventListener("message", (event) => {
-    const msg = event.data as InjectedCommand | undefined;
+    const msg = event.data as messages.InjectedCommand | undefined;
     if (msg?.destination !== "injected") return;
 
     switch (msg.type) {
+      case "RESET_STATE":
+        videoTitle = null;
+        hasCaptions = false;
+        captions = [];
+        lastCaptionIndex = -1;
+        break;
+
+      case "RESTORE_STATE": {
+        const isVideo = location.pathname === "/watch";
+        const video = document.querySelector("video");
+        const msg: Parameters<typeof messages.postToContent>[0] = {
+          type: "VIDEO_STATE",
+          isVideo,
+          hasCaptions,
+          relayToSidePanel: true,
+        };
+        if (videoTitle) msg.title = videoTitle;
+        if (captions.length > 0) msg.captions = captions;
+        if (video) msg.timeMs = Math.round(video.currentTime * 1000);
+        messages.postToContent(msg);
+        break;
+      }
+
       case "TOGGLE_SUBTITLES_ON": {
         const player = document.getElementById("movie_player") as
           | (HTMLElement & {
@@ -164,10 +188,10 @@ export default defineUnlistedScript(() => {
 
   // Track video time and send updates only when the active caption changes
   function findCaptionIndex(timeMs: number): number {
-    if (activeCaptions.length === 0) return -1;
+    if (captions.length === 0) return -1;
     let idx = -1;
-    for (let i = activeCaptions.length - 1; i >= 0; i--) {
-      if (activeCaptions[i].startMs <= timeMs) {
+    for (let i = captions.length - 1; i >= 0; i--) {
+      if (captions[i].startMs <= timeMs) {
         idx = i;
         break;
       }
@@ -181,7 +205,7 @@ export default defineUnlistedScript(() => {
       const idx = findCaptionIndex(timeMs);
       if (idx === lastCaptionIndex) return;
       lastCaptionIndex = idx;
-      postToContent({
+      messages.postToContent({
         type: "VIDEO_STATE",
         timeMs,
         relayToSidePanel: true,

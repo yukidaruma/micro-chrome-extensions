@@ -9,10 +9,6 @@ export default defineContentScript({
   async main(ctx) {
     logger.log("Content script loaded.");
 
-    let captions: messages.Caption[] = [];
-    let videoTitle: string | null = null;
-    let hasCaptions: boolean = false;
-
     await injectScript("/injected.js", {
       keepInDom: true,
     });
@@ -34,10 +30,8 @@ export default defineContentScript({
       lastVideoKey = key;
 
       const isVideo = testIsVideo();
-      if (!isVideo) videoTitle = null;
-      captions = [];
-      hasCaptions = false;
 
+      messages.postToInjected({ type: "RESET_STATE" });
       messages.postToPanel({ type: "YT_NAVIGATE", isVideo });
     }
 
@@ -67,19 +61,11 @@ export default defineContentScript({
         } = msg;
         messages.postToPanel(body);
       }
-
-      switch (msg.type) {
-        case "VIDEO_STATE":
-          if (msg.captions) captions = msg.captions;
-          if (msg.title) videoTitle = msg.title;
-          if (msg.hasCaptions != null) hasCaptions = msg.hasCaptions;
-          break;
-      }
     });
 
     // From side panel
     browser.runtime.onMessage.addListener(
-      (message: messages.BackgroundToTabMessage, _sender, sendResponse) => {
+      (message: messages.BackgroundToTabMessage, _sender, _sendResponse) => {
         switch (message.type) {
           case "SEEK_VIDEO": {
             const video = document.querySelector("video");
@@ -88,22 +74,9 @@ export default defineContentScript({
             }
             break;
           }
-          case "INIT": {
-            const video = document.querySelector("video");
-            const payload: messages.Body<messages.ContentMessage> = {
-              type: "VIDEO_STATE",
-              hasCaptions,
-            };
-            if (videoTitle) payload.title = videoTitle;
-            if (video) payload.timeMs = video.currentTime * 1000;
-            if (captions) payload.captions = captions;
-
-            messages.postToPanel(payload);
-            sendResponse(true);
-            return;
-          }
+          case "RESTORE_STATE":
           case "TOGGLE_SUBTITLES_ON":
-            messages.postToInjected({ type: "TOGGLE_SUBTITLES_ON" });
+            messages.postToInjected({ type: message.type });
             break;
         }
       },

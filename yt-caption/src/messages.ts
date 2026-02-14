@@ -13,6 +13,7 @@ export type InjectedMessage = {
   destination: "content";
   relayToSidePanel?: boolean;
   type: "VIDEO_STATE";
+  isVideo?: boolean;
   title?: string;
   hasCaptions?: boolean;
   captions?: Caption[];
@@ -23,6 +24,7 @@ export type InjectedMessage = {
 export type ContentMessage = { destination: "sidepanel" } & (
   | {
       type: "VIDEO_STATE";
+      isVideo?: boolean;
       title?: string;
       hasCaptions?: boolean;
       captions?: Caption[];
@@ -46,14 +48,22 @@ export type BackgroundToPanelMessage = { destination: "sidepanel" } & (
 
 // browser.tabs.sendMessage: background -> content
 export type BackgroundToTabMessage =
+  | { type: "RESTORE_STATE" }
   | { type: "SEEK_VIDEO"; timeMs: number }
-  | { type: "INIT" }
   | { type: "TOGGLE_SUBTITLES_ON" };
 
 // window.postMessage: content -> injected
-export type InjectedCommand = { destination: "injected" } & {
-  type: "TOGGLE_SUBTITLES_ON";
-};
+export type InjectedCommand = { destination: "injected" } & (
+  | {
+      type: "RESET_STATE";
+    }
+  | {
+      type: "RESTORE_STATE";
+    }
+  | {
+      type: "TOGGLE_SUBTITLES_ON";
+    }
+);
 
 // Senders
 

@@ -231,6 +231,7 @@
           break;
         case "VIDEO_STATE": {
           const patch: Partial<TabData> = {};
+          if (message.isVideo != null) patch.isVideo = message.isVideo;
           if (message.timeMs != null) patch.timeMs = message.timeMs;
           if (message.title) patch.title = message.title;
           if (message.captions) {

@@ -7,8 +7,8 @@ export default defineBackground(() => {
   browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
   /**
-   * Query YT tabs in a window, score them, INIT the best one, and notify the panel.
-   * @param initAll - INIT all /watch tabs so they sync state to the panel.
+   * Query YouTube tabs in a window, restore the best ones, and notify the panel.
+   * @param restoreAll - Restore all /watch tabs so they sync state to the panel.
    */
   async function activateYtTabs(windowId: number, initAll = false) {
     const tabs = await browser.tabs.query({
@@ -37,11 +37,13 @@ export default defineBackground(() => {
         );
         if (watchTabs.length > 0) {
           await Promise.all(
-            watchTabs.map((t) => messages.postToTab(t.id!, { type: "INIT" })),
+            watchTabs.map((t) =>
+              messages.postToTab(t.id!, { type: "RESTORE_STATE" }),
+            ),
           );
         }
       } else {
-        await messages.postToTab(tabIds[0], { type: "INIT" });
+        await messages.postToTab(tabIds[0], { type: "RESTORE_STATE" });
       }
     }
     messages.postToPanel({ type: "TAB_ACTIVATED", tabIds });
