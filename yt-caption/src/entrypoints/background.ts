@@ -10,7 +10,7 @@ export default defineBackground(() => {
    * Query YouTube tabs in a window, restore the best ones, and notify the panel.
    * @param restoreAll - Restore all /watch tabs so they sync state to the panel.
    */
-  async function activateYtTabs(windowId: number, restoreState = false) {
+  async function activateYtTabs(windowId?: number, restoreState = false) {
     const tabs = await browser.tabs.query({
       windowId,
       // If windowId is not available (on YOUTUBE_LEAVE), use currentWindow instead of windowId
@@ -47,7 +47,7 @@ export default defineBackground(() => {
         }
       }
     }
-    messages.postToPanel({ type: "TAB_ACTIVATED", tabIds }, windowId);
+    messages.postToPanel({ type: "TAB_ACTIVATED", tabIds });
   }
 
   // Tab closing has two cases:
@@ -60,7 +60,7 @@ export default defineBackground(() => {
     activateYtTabs(windowId);
   });
   browser.tabs.onRemoved.addListener((tabId, { windowId }) => {
-    messages.postToPanel({ type: "TAB_REMOVED", tabId }, windowId);
+    messages.postToPanel({ type: "TAB_REMOVED", tabId });
     activateYtTabs(windowId);
   });
   browser.sidePanel.onOpened.addListener(({ windowId }) => {
@@ -73,19 +73,14 @@ export default defineBackground(() => {
 
     switch (msg.type) {
       case "YOUTUBE_RELOAD":
-        messages.postToPanel(
-          {
-            type: "VIDEO_STATE",
-            isLoading: true,
-          },
-          sender.tab!.windowId,
-        );
+        messages.postToPanel({
+          type: "VIDEO_STATE",
+          isLoading: true,
+        });
         break;
 
       case "YOUTUBE_LEAVE":
-        browser.tabs.query({ active: true }).then(([tab]) => {
-          activateYtTabs(tab.windowId);
-        });
+        activateYtTabs();
         break;
 
       case "SEEK_VIDEO":

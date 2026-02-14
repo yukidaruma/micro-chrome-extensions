@@ -67,7 +67,7 @@ export default defineContentScript({
           relayToSidePanel: relay,
           ...body
         } = msg;
-        messages.postToPanel(body, tab.windowId);
+        messages.postToPanel(body);
       });
     });
 

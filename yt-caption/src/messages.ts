@@ -88,11 +88,10 @@ export function postToBackground(message: Body<PanelMessage>) {
 
 export function postToPanel(
   message: Body<ContentMessage> | Body<BackgroundToPanelMessage>,
-  windowId: number,
 ) {
   logger.debug("-> sidepanel", message);
   return browser.runtime
-    .sendMessage({ windowId, ...message, destination: "sidepanel" })
+    .sendMessage({ ...message, destination: "sidepanel" })
     .catch(() => {});
 }
 
