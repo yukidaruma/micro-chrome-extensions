@@ -55,6 +55,11 @@ export default defineBackground(() => {
       await activateYtTabs(windowId);
     } catch {}
   });
+  browser.tabs.onCreated.addListener(async ({ windowId }) => {
+    try {
+      await activateYtTabs(windowId);
+    } catch {}
+  });
   browser.tabs.onRemoved.addListener(async (tabId, { windowId }) => {
     messages.postToPanel({ type: "TAB_REMOVED", tabId });
     activateYtTabs(windowId);
