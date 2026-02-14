@@ -11,6 +11,7 @@
         "@tsconfig/svelte": "^5.0.7",
         "@wxt-dev/auto-icons": "^1.1.0",
         "@wxt-dev/module-svelte": "^2.0.4",
+        "navigation-api-types": "^0.6.1",
         "svelte": "^5.49.2",
         "svelte-check": "^4.3.6",
         "tailwindcss": "^4.1.18",
@@ -656,6 +657,8 @@
     "nano-spawn": ["nano-spawn@2.0.0", "", {}, "sha512-tacvGzUY5o2D8CBh2rrwxyNojUsZNU2zjNTzKQrkgGJQTbGAfArVWXSKMBokBeeg6C7OLRGUEyoFlYbfeWQIqw=="],
 
     "nanoid": ["nanoid@3.3.11", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w=="],
+
+    "navigation-api-types": ["navigation-api-types@0.6.1", "", {}, "sha512-e1BbABfPRKLkBbZfAVuRFR2CLFWOtSt8e0ryJivjvLdw8yxD7ASPgyfl+klcGYvrPcP4zhOtZ4KpmQcEo1FgQw=="],
 
     "node-fetch-native": ["node-fetch-native@1.6.7", "", {}, "sha512-g9yhqoedzIUm0nTnTqAQvueMPVOuIY16bqgAJJC8XOOubYFNwz6IER9qs0Gq2Xd0+CecCKFjtdDTMA4u4xG06Q=="],
 
