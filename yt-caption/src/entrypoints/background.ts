@@ -75,6 +75,13 @@ export default defineBackground(() => {
     const msg = message as messages.PanelMessage;
 
     switch (msg.type) {
+      case "YOUTUBE_RELOAD":
+        messages.postToPanel({
+          type: "VIDEO_STATE",
+          isLoading: true,
+        });
+        break;
+
       case "YOUTUBE_LEAVE":
         activateYtTabs(msg.windowId);
         break;

@@ -3,6 +3,16 @@ import { browser } from "wxt/browser";
 
 export type Caption = { startMs: number; text: string };
 
+type VideoState = {
+  type: "VIDEO_STATE";
+  isLoading?: boolean;
+  isVideo?: boolean;
+  title?: string;
+  hasCaptions?: boolean;
+  captions?: Caption[];
+  timeMs?: number;
+};
+
 // Strip destination for sender function parameters
 export type Body<T> = T extends { destination: string }
   ? Omit<T, "destination">
@@ -12,33 +22,21 @@ export type Body<T> = T extends { destination: string }
 export type InjectedMessage = {
   destination: "content";
   relayToSidePanel?: boolean;
-  type: "VIDEO_STATE";
-  isVideo?: boolean;
-  title?: string;
-  hasCaptions?: boolean;
-  captions?: Caption[];
-  timeMs?: number;
-};
+} & VideoState;
 
 // browser.runtime.sendMessage: content -> sidepanel
 export type ContentMessage = { destination: "sidepanel" } & (
-  | {
-      type: "VIDEO_STATE";
-      isVideo?: boolean;
-      title?: string;
-      hasCaptions?: boolean;
-      captions?: Caption[];
-      timeMs?: number;
-    }
+  | VideoState
   | { type: "YT_NAVIGATE"; isVideo: boolean }
 );
 
 // browser.runtime.sendMessage: sidepanel -> background
 export type PanelMessage = { destination: "background" } & (
   | { type: "SIDE_PANEL_OPEN"; windowId?: number }
-  | { type: "YOUTUBE_LEAVE"; windowId?: never }
   | { type: "SEEK_VIDEO"; timeMs: number; tabId: number }
   | { type: "TOGGLE_SUBTITLES_ON"; tabId: number }
+  | { type: "YOUTUBE_LEAVE"; windowId?: never }
+  | { type: "YOUTUBE_RELOAD"; windowId?: never }
 );
 
 // browser.runtime.sendMessage: background -> sidepanel

@@ -233,11 +233,11 @@
           const patch: Partial<TabData> = {};
           if (message.isVideo != null) patch.isVideo = message.isVideo;
           if (message.timeMs != null) patch.timeMs = message.timeMs;
-          if (message.title) patch.title = message.title;
+          if (message.isLoading != null) patch.isLoading = message.isLoading;
+          if (message.title != null) patch.title = message.title;
           if (message.captions) {
             patch.captions = message.captions;
 
-            patch.isLoading = false;
             patch.showSubtitleHint = false;
             clearTimeout(showCaptionHintTimer);
           }
@@ -253,9 +253,6 @@
                 }
               }, 3000);
             }
-          } else if (message.hasCaptions === false) {
-            // === false: distinguish load completion from missing field
-            patch.isLoading = false;
           }
 
           logger.debug(message);

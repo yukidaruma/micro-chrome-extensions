@@ -35,18 +35,16 @@ export default defineContentScript({
       messages.postToPanel({ type: "YT_NAVIGATE", isVideo });
       if (isInitialNavigation) {
         messages.postToBackground({
-          type: "YOUTUBE_LEAVE",
+          type: "YOUTUBE_RELOAD",
         });
       }
     }
 
     onNavigation(true);
 
-    ctx.addEventListener(
-      window.navigation!,
-      "currententrychange",
-      onNavigation,
-    );
+    ctx.addEventListener(window.navigation!, "currententrychange", () => {
+      onNavigation();
+    });
 
     // Navigating away from YouTube unloads the content script; notify panel before leaving.
     ctx.addEventListener(window, "pagehide", () => {

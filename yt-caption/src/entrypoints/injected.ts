@@ -41,6 +41,7 @@ export default defineUnlistedScript(() => {
         type: "VIDEO_STATE",
         title: videoTitle,
         hasCaptions,
+        isLoading: hasCaptions ? true : false,
         relayToSidePanel: true,
       });
     }
@@ -87,6 +88,7 @@ export default defineUnlistedScript(() => {
           messages.postToContent({
             type: "VIDEO_STATE",
             captions,
+            isLoading: false,
             relayToSidePanel: true,
           });
         }
