@@ -38,9 +38,7 @@ export default defineContentScript({
           type: "YOUTUBE_RELOAD",
         });
       } else {
-        browser.windows.getCurrent().then(({ id }) => {
-          messages.postToPanel({ type: "YT_NAVIGATE", isVideo });
-        });
+        messages.postToPanel({ type: "YT_NAVIGATE", isVideo });
       }
     }
 

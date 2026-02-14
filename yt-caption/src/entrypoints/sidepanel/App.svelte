@@ -44,7 +44,6 @@
     tabDataMap.set(tabId, { ...existing, ...patch });
   }
 
-  let windowId = -1;
   let activeTabData = $derived(tabDataMap.get(activeYtTabId));
   let captions = $derived(activeTabData?.captions ?? []);
   let videoTitle = $derived(activeTabData?.title ?? null);
@@ -168,11 +167,6 @@
   }
 
   onMount(() => {
-    // TODO(reword): This is not concurrency-safe
-    browser.windows.getCurrent().then(({ id }) => {
-      windowId = id!;
-    });
-
     const onKeydown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "f") {
         e.preventDefault();
@@ -185,7 +179,6 @@
       sender: Browser.runtime.MessageSender,
     ) => {
       if (message.destination !== "sidepanel") return;
-      if (message.windowId !== windowId) return;
 
       if (message.type === "TAB_ACTIVATED") {
         const { tabIds } = message;
