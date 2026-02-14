@@ -346,26 +346,16 @@
     use:passiveScrollHandler
     class="flex-1 overflow-y-auto p-2"
   >
-    {#if captions.length === 0 && !isLoading}
+    {#if !isVideo}
       <div class="py-8 text-center">
         <p class="text-base font-semibold text-gray-600 dark:text-gray-300">
-          {#if isVideo}
-            No Captions Available
-          {:else}
-            No Video Detected
-          {/if}
+          No Video Detected
         </p>
         <p class="mt-1 text-xs text-gray-400">
-          {#if isVideo}
-            This video doesn't have captions.
-          {:else}
-            Navigate to a YouTube video to see captions.
-          {/if}
+          Navigate to a YouTube video to see captions.
         </p>
       </div>
-    {/if}
-
-    {#if captions.length === 0 && isVideo && isLoading}
+    {:else if isLoading}
       <div class="relative">
         <ul
           class="[&>li]:border-b [&>li]:border-b-gray-100 dark:[&>li]:border-b-neutral-800"
@@ -413,38 +403,47 @@
           </div>
         {/if}
       </div>
-    {/if}
-
-    <ul
-      class="[&>li]:border-b [&>li]:border-b-gray-100 dark:[&>li]:border-b-neutral-800"
-    >
-      {#each captions as caption, i (caption.startMs)}
-        {@const isCurrentMatch =
-          searchQuery && matchIndices[currentMatchPos] === i}
-        <li
-          bind:this={captionEls[i]}
-          class={{
-            "ring-2 ring-inset ring-blue-400": isCurrentMatch,
-          }}
-        >
-          <button
-            class={[
-              "flex min-h-8 w-full cursor-pointer items-baseline gap-2 px-1 py-1.5 text-left text-[13px]",
-              i === activeIndex
-                ? "text-black dark:text-gray-100 bg-yellow-100 dark:bg-yellow-900/40"
-                : "text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-neutral-800",
-            ]}
-            onclick={() => seek(caption.startMs)}
+    {:else if captions.length === 0}
+      <div class="py-8 text-center">
+        <p class="text-base font-semibold text-gray-600 dark:text-gray-300">
+          No Captions Available
+        </p>
+        <p class="mt-1 text-xs text-gray-400">
+          This video doesn't have captions.
+        </p>
+      </div>
+    {:else}
+      <ul
+        class="[&>li]:border-b [&>li]:border-b-gray-100 dark:[&>li]:border-b-neutral-800"
+      >
+        {#each captions as caption, i (caption.startMs)}
+          {@const isCurrentMatch =
+            searchQuery && matchIndices[currentMatchPos] === i}
+          <li
+            bind:this={captionEls[i]}
+            class={{
+              "ring-2 ring-inset ring-blue-400": isCurrentMatch,
+            }}
           >
-            <span
-              class="shrink-0 font-mono text-[11px] text-gray-500 dark:text-gray-400"
+            <button
+              class={[
+                "flex min-h-8 w-full cursor-pointer items-baseline gap-2 px-1 py-1.5 text-left text-[13px]",
+                i === activeIndex
+                  ? "text-black dark:text-gray-100 bg-yellow-100 dark:bg-yellow-900/40"
+                  : "text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-neutral-800",
+              ]}
+              onclick={() => seek(caption.startMs)}
             >
-              {formatTime(caption.startMs)}
-            </span>
-            <HighlightText text={caption.text} query={searchQuery} />
-          </button>
-        </li>
-      {/each}
-    </ul>
+              <span
+                class="shrink-0 font-mono text-[11px] text-gray-500 dark:text-gray-400"
+              >
+                {formatTime(caption.startMs)}
+              </span>
+              <HighlightText text={caption.text} query={searchQuery} />
+            </button>
+          </li>
+        {/each}
+      </ul>
+    {/if}
   </div>
 </div>
