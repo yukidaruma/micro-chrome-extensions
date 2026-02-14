@@ -80,6 +80,7 @@ export default defineBackground(() => {
       case "YOUTUBE_RELOAD":
         messages.postToPanel({
           type: "VIDEO_STATE",
+          isVideo: true,
           isLoading: true,
         });
         break;

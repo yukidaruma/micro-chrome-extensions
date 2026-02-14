@@ -61,14 +61,12 @@ export default defineContentScript({
       if (msg?.destination !== "content") return;
       if (!msg.relayToSidePanel) return;
 
-      browser.tabs.query({ active: true }).then(([tab]) => {
-        const {
-          destination: _destination,
-          relayToSidePanel: relay,
-          ...body
-        } = msg;
-        messages.postToPanel(body);
-      });
+      const {
+        destination: _destination,
+        relayToSidePanel: relay,
+        ...body
+      } = msg;
+      messages.postToPanel(body);
     });
 
     // From side panel
