@@ -22,7 +22,12 @@ export default defineContentScript({
       keepInDom: true,
     });
 
+    // Workaround for YouTube firing currententrychange twice per navigation
+    let lastUrl = "";
     function onNavigation() {
+      if (lastUrl === location.href) return;
+      lastUrl = location.href;
+
       const isVideo = location.pathname === "/watch";
 
       if (!isVideo) videoTitle = null;
@@ -34,12 +39,18 @@ export default defineContentScript({
 
     onNavigation();
 
-    // From injected script
     ctx.addEventListener(
       window.navigation!,
       "currententrychange",
       onNavigation,
     );
+
+    // Navigating away from YouTube unloads the content script; notify panel before leaving.
+    ctx.addEventListener(window, "pagehide", () => {
+      postToPanel({ type: "YT_NAVIGATE", isVideo: false });
+    });
+
+    // Handle messages from injected script
     ctx.addEventListener(window, "message", (event) => {
       const msg = event.data as InjectedMessage | undefined;
       if (msg?.destination !== "content") return;

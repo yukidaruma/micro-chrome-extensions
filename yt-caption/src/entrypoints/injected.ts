@@ -114,7 +114,6 @@ export default defineUnlistedScript(() => {
     const interceptor = interceptors.find((i) => url.includes(i.match));
     if (interceptor) {
       response.clone().json().then(interceptor.handle);
-      logger.log("interceptor!", url);
     }
 
     return response;
@@ -131,7 +130,6 @@ export default defineUnlistedScript(() => {
       );
       if (!interceptor) return;
 
-      logger.log("interceptor!", this.responseURL);
       try {
         interceptor.handle(JSON.parse(this.responseText));
       } catch {}

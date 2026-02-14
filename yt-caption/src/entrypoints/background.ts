@@ -33,16 +33,19 @@ export default defineBackground(() => {
       .flatMap((t) => (t.id ? [t.id] : []));
     if (tabIds.length > 0) {
       if (initAll) {
-        await Promise.all(
-          sorted
-            .filter((t) => t.id && t.url && new URL(t.url).pathname === "/watch")
-            .map((t) => postToTab(t.id!, { type: "INIT" })),
+        const watchTabs = sorted.filter(
+          (t) => t.id && t.url && new URL(t.url).pathname === "/watch",
         );
+        if (watchTabs.length > 0) {
+          await Promise.all(
+            watchTabs.map((t) => postToTab(t.id!, { type: "INIT" })),
+          );
+        }
       } else {
         await postToTab(tabIds[0], { type: "INIT" });
       }
-      postToPanel({ type: "TAB_ACTIVATED", tabIds });
     }
+    postToPanel({ type: "TAB_ACTIVATED", tabIds: [] });
   }
 
   // Tab closing has two cases:

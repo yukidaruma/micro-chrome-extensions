@@ -12,6 +12,7 @@
     captions: messages.Caption[];
     title: string | null;
     timeMs: number;
+    isVideo: boolean;
     hasCaptions: boolean;
     isLoading: boolean;
     showSubtitleHint: boolean;
@@ -25,6 +26,7 @@
     captions: [],
     title: null,
     timeMs: -1,
+    isVideo: false,
     hasCaptions: false,
     isLoading: true,
     showSubtitleHint: false,
@@ -46,6 +48,7 @@
   let captions = $derived(activeTabData?.captions ?? []);
   let videoTitle = $derived(activeTabData?.title ?? null);
   let currentTimeMs = $derived(activeTabData?.timeMs ?? -1);
+  let isVideo = $derived(activeTabData?.isVideo ?? false);
   let hasCaptions = $derived(activeTabData?.hasCaptions ?? false);
   let isLoading = $derived(activeTabData?.isLoading ?? true);
   let showSubtitleHint = $derived(activeTabData?.showSubtitleHint ?? false);
@@ -187,10 +190,15 @@
       if (message.destination !== "sidepanel") return;
 
       if (message.type === "TAB_ACTIVATED") {
+        const { tabIds } = message;
+        if (tabIds.length === 0) {
+          activeYtTabId = -1;
+          return;
+        }
+
         // tabIds are scored by background.ts (active > /watch).
         // On ties (i.e. switching to a non-YT tab with multiple inactive /watch tabs),
         // prioritize a tab that already has captions loaded.
-        const { tabIds } = message;
         let best = tabIds[0] ?? -1;
         for (const id of tabIds) {
           if (tabDataMap.has(id)) {
@@ -209,7 +217,18 @@
       switch (message.type) {
         case "YT_NAVIGATE":
           clearTimeout(showCaptionHintTimer);
-          updateTabData(tabId, null);
+          if (message.isVideo) {
+            updateTabData(tabId, {
+              ...defaultTabData,
+              isVideo: true,
+              isLoading: true,
+            });
+          } else {
+            updateTabData(tabId, {
+              ...defaultTabData,
+              isLoading: false,
+            });
+          }
           break;
         case "VIDEO_STATE": {
           const patch: Partial<TabData> = {};
@@ -232,7 +251,7 @@
                 if (current?.isLoading && current.captions.length === 0) {
                   updateTabData(tabId, { showSubtitleHint: true });
                 }
-              }, 2500);
+              }, 3000);
             }
           } else if (message.hasCaptions === false) {
             // === false: distinguish load completion from missing field
@@ -331,15 +350,15 @@
     {#if captions.length === 0 && !isLoading}
       <div class="py-8 text-center">
         <p class="text-base font-semibold text-gray-600 dark:text-gray-300">
-          {#if hasCaptions}
-            No Captions Found
+          {#if isVideo}
+            No Captions Available
           {:else}
             No Video Detected
           {/if}
         </p>
         <p class="mt-1 text-xs text-gray-400">
-          {#if hasCaptions}
-            This video doesn't have captions available.
+          {#if isVideo}
+            This video doesn't have captions.
           {:else}
             Navigate to a YouTube video to see captions.
           {/if}
