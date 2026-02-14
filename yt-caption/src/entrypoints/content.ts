@@ -32,6 +32,7 @@ export default defineContentScript({
       const isVideo = testIsVideo();
 
       messages.postToInjected({ type: "RESET_STATE" });
+      // TODO(Reword comment): すでにYouTubeを開いているタブから、直接YouTubeのページを開いたとき (リロード含む)。状態をリセットする
       if (isInitialNavigation) {
         messages.postToBackground({
           type: "YOUTUBE_RELOAD",
@@ -58,15 +59,16 @@ export default defineContentScript({
     ctx.addEventListener(window, "message", (event) => {
       const msg = event.data as messages.InjectedMessage | undefined;
       if (msg?.destination !== "content") return;
+      if (!msg.relayToSidePanel) return;
 
-      if (msg.relayToSidePanel) {
+      browser.tabs.query({ active: true }).then(([tab]) => {
         const {
           destination: _destination,
           relayToSidePanel: relay,
           ...body
         } = msg;
-        messages.postToPanel(body);
-      }
+        messages.postToPanel(body, tab.windowId);
+      });
     });
 
     // From side panel

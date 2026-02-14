@@ -33,7 +33,6 @@ export type ContentMessage = { destination: "sidepanel" } & (
 
 // browser.runtime.sendMessage: sidepanel -> background
 export type PanelMessage = { destination: "background" } & (
-  | { type: "SIDE_PANEL_OPEN"; windowId?: number }
   | { type: "SEEK_VIDEO"; timeMs: number; tabId: number }
   | { type: "TOGGLE_SUBTITLES_ON"; tabId: number }
   | { type: "YOUTUBE_LEAVE"; windowId?: never }
@@ -89,10 +88,11 @@ export function postToBackground(message: Body<PanelMessage>) {
 
 export function postToPanel(
   message: Body<ContentMessage> | Body<BackgroundToPanelMessage>,
+  windowId: number,
 ) {
   logger.debug("-> sidepanel", message);
   return browser.runtime
-    .sendMessage({ ...message, destination: "sidepanel" })
+    .sendMessage({ windowId, ...message, destination: "sidepanel" })
     .catch(() => {});
 }
 

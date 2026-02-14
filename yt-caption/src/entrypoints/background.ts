@@ -10,7 +10,7 @@ export default defineBackground(() => {
    * Query YouTube tabs in a window, restore the best ones, and notify the panel.
    * @param restoreAll - Restore all /watch tabs so they sync state to the panel.
    */
-  async function activateYtTabs(windowId?: number, restoreState = false) {
+  async function activateYtTabs(windowId: number, restoreState = false) {
     const tabs = await browser.tabs.query({
       windowId,
       // If windowId is not available (on YOUTUBE_LEAVE), use currentWindow instead of windowId
@@ -47,7 +47,7 @@ export default defineBackground(() => {
         }
       }
     }
-    messages.postToPanel({ type: "TAB_ACTIVATED", tabIds });
+    messages.postToPanel({ type: "TAB_ACTIVATED", tabIds }, windowId);
   }
 
   // Tab closing has two cases:
@@ -60,28 +60,32 @@ export default defineBackground(() => {
     activateYtTabs(windowId);
   });
   browser.tabs.onRemoved.addListener((tabId, { windowId }) => {
-    messages.postToPanel({ type: "TAB_REMOVED", tabId });
+    messages.postToPanel({ type: "TAB_REMOVED", tabId }, windowId);
+    activateYtTabs(windowId);
+  });
+  browser.sidePanel.onOpened.addListener(({ windowId }) => {
     activateYtTabs(windowId);
   });
 
-  browser.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
+  browser.runtime.onMessage.addListener((message, sender, _sendResponse) => {
     if (message.destination !== "background") return;
     const msg = message as messages.PanelMessage;
 
     switch (msg.type) {
       case "YOUTUBE_RELOAD":
-        messages.postToPanel({
-          type: "VIDEO_STATE",
-          isLoading: true,
-        });
+        messages.postToPanel(
+          {
+            type: "VIDEO_STATE",
+            isLoading: true,
+          },
+          sender.tab!.windowId,
+        );
         break;
 
       case "YOUTUBE_LEAVE":
-        activateYtTabs(msg.windowId);
-        break;
-
-      case "SIDE_PANEL_OPEN":
-        activateYtTabs(msg.windowId, true);
+        browser.tabs.query({ active: true }).then(([tab]) => {
+          activateYtTabs(tab.windowId);
+        });
         break;
 
       case "SEEK_VIDEO":

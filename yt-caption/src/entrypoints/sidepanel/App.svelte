@@ -167,14 +167,6 @@
   }
 
   onMount(() => {
-    browser.windows.getCurrent().then((window) => {
-      if (window.id == null) return;
-      messages.postToBackground({
-        type: "SIDE_PANEL_OPEN",
-        windowId: window.id,
-      });
-    });
-
     const onKeydown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "f") {
         e.preventDefault();
