@@ -1,7 +1,14 @@
-# WXT + Svelte
+# YT Caption Panel
 
-This template should help get you started developing with Svelte in WXT.
+<center><img width="400" src="./promo-1280x800.svg"></center>
 
-## Recommended IDE Setup
+<a href="https://chromewebstore.google.com/detail/eakinflfejmldnjfbdmoehpcfpedaepc"><img src="https://img.shields.io/chrome-web-store/v/eakinflfejmldnjfbdmoehpcfpedaepc?style=flat-square&color=%234285f4&label=Version&logo=google-chrome&logoColor=white" alt="Version"></a>
+<a href="https://chromewebstore.google.com/detail/eakinflfejmldnjfbdmoehpcfpedaepc"><img src="https://img.shields.io/chrome-web-store/users/eakinflfejmldnjfbdmoehpcfpedaepc?style=flat-square&color=%234285f4&label=Users&logo=googlechrome&logoColor=white" alt="Users"></a>
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+View, search, and navigate YouTube captions in a side panel.
+
+## Usage
+
+1. Pin the extension to the toolbar.
+2. Click the pinned extension to open side panel.
+3. Play a YouTube video with captions enabled.
