@@ -4,7 +4,7 @@ import { browser } from "wxt/browser";
 export type Caption = { startMs: number; text: string };
 
 // Strip destination for sender function parameters
-type Body<T> = T extends { destination: string }
+export type Body<T> = T extends { destination: string }
   ? Omit<T, "destination">
   : never;
 

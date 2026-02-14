@@ -19,11 +19,19 @@ export default defineContentScript({
 
     const testIsVideo = () => location.pathname === "/watch";
 
-    // Workaround for YouTube firing currententrychange twice per navigation
-    let lastUrl = "";
+    // Deduplicate navigations: YouTube may fire currententrychange multiple
+    // times for the same video (e.g. playlist index param changes).
+    let lastVideoKey = "";
+    function videoKey() {
+      const params = new URLSearchParams(location.search);
+      return params.get("v") ?? "";
+    }
     function onNavigation() {
-      if (lastUrl === location.href) return;
-      lastUrl = location.href;
+      const key = videoKey();
+      logger.log("onNavigation", { lastVideoKey, key });
+
+      if (lastVideoKey === key) return;
+      lastVideoKey = key;
 
       const isVideo = testIsVideo();
       if (!isVideo) videoTitle = null;
@@ -82,11 +90,11 @@ export default defineContentScript({
           }
           case "INIT": {
             const video = document.querySelector("video");
-            const payload: messages.ContentMessage = {
+            const payload: messages.Body<messages.ContentMessage> = {
               type: "VIDEO_STATE",
-              title: videoTitle!,
               hasCaptions,
             };
+            if (videoTitle) payload.title = videoTitle;
             if (video) payload.timeMs = video.currentTime * 1000;
             if (captions) payload.captions = captions;
 
