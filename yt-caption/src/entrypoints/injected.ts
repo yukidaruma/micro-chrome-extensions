@@ -40,6 +40,7 @@ export default defineUnlistedScript(() => {
       messages.postToContent({
         type: "VIDEO_STATE",
         title: videoTitle,
+        isVideo: true,
         hasCaptions,
         isLoading: hasCaptions ? true : false,
         relayToSidePanel: true,

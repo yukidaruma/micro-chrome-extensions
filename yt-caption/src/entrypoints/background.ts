@@ -45,8 +45,6 @@ export default defineBackground(() => {
             ),
           );
         }
-      } else {
-        await messages.postToTab(tabIds[0], { type: "RESTORE_STATE" });
       }
     }
     messages.postToPanel({ type: "TAB_ACTIVATED", tabIds });
@@ -55,17 +53,13 @@ export default defineBackground(() => {
   // Tab closing has two cases:
   // 1. Closing the active tab - Chrome activates another tab, so onActivated fires.
   // 2. Closing a background tab - onActivated does NOT fire, so onRemoved needs to fire it.
-  browser.tabs.onActivated.addListener(async ({ windowId }) => {
-    try {
-      await activateYtTabs(windowId);
-    } catch {}
+  browser.tabs.onActivated.addListener(({ windowId }) => {
+    activateYtTabs(windowId);
   });
-  browser.tabs.onCreated.addListener(async ({ windowId }) => {
-    try {
-      await activateYtTabs(windowId);
-    } catch {}
+  browser.tabs.onCreated.addListener(({ windowId }) => {
+    activateYtTabs(windowId);
   });
-  browser.tabs.onRemoved.addListener(async (tabId, { windowId }) => {
+  browser.tabs.onRemoved.addListener((tabId, { windowId }) => {
     messages.postToPanel({ type: "TAB_REMOVED", tabId });
     activateYtTabs(windowId);
   });
