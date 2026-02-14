@@ -1,12 +1,7 @@
 /// <reference types="navigation-api-types" />
 
 import logger from "@/logger";
-import { postToInjected, postToPanel } from "@/messages";
-import type {
-  Caption,
-  InjectedMessage,
-  BackgroundToTabMessage,
-} from "@/messages";
+import * as messages from "@/messages";
 
 export default defineContentScript({
   runAt: "document_start",
@@ -14,7 +9,7 @@ export default defineContentScript({
   async main(ctx) {
     logger.log("Content script loaded.");
 
-    let captions: Caption[] = [];
+    let captions: messages.Caption[] = [];
     let videoTitle: string | null = null;
     let hasCaptions: boolean = false;
 
@@ -22,19 +17,20 @@ export default defineContentScript({
       keepInDom: true,
     });
 
+    const testIsVideo = () => location.pathname === "/watch";
+
     // Workaround for YouTube firing currententrychange twice per navigation
     let lastUrl = "";
     function onNavigation() {
       if (lastUrl === location.href) return;
       lastUrl = location.href;
 
-      const isVideo = location.pathname === "/watch";
-
+      const isVideo = testIsVideo();
       if (!isVideo) videoTitle = null;
       captions = [];
       hasCaptions = false;
 
-      postToPanel({ type: "YT_NAVIGATE", isVideo });
+      messages.postToPanel({ type: "YT_NAVIGATE", isVideo });
     }
 
     onNavigation();
@@ -47,12 +43,12 @@ export default defineContentScript({
 
     // Navigating away from YouTube unloads the content script; notify panel before leaving.
     ctx.addEventListener(window, "pagehide", () => {
-      postToPanel({ type: "YT_NAVIGATE", isVideo: false });
+      messages.postToPanel({ type: "YT_NAVIGATE", isVideo: testIsVideo() });
     });
 
     // Handle messages from injected script
     ctx.addEventListener(window, "message", (event) => {
-      const msg = event.data as InjectedMessage | undefined;
+      const msg = event.data as messages.InjectedMessage | undefined;
       if (msg?.destination !== "content") return;
 
       if (msg.relayToSidePanel) {
@@ -61,7 +57,7 @@ export default defineContentScript({
           relayToSidePanel: relay,
           ...body
         } = msg;
-        postToPanel(body);
+        messages.postToPanel(body);
       }
 
       switch (msg.type) {
@@ -75,7 +71,7 @@ export default defineContentScript({
 
     // From side panel
     browser.runtime.onMessage.addListener(
-      (message: BackgroundToTabMessage, _sender, sendResponse) => {
+      (message: messages.BackgroundToTabMessage, _sender, sendResponse) => {
         switch (message.type) {
           case "SEEK_VIDEO": {
             const video = document.querySelector("video");
@@ -86,19 +82,20 @@ export default defineContentScript({
           }
           case "INIT": {
             const video = document.querySelector("video");
-            const timeMs = video ? video.currentTime * 1000 : undefined;
-            postToPanel({
+            const payload: messages.ContentMessage = {
               type: "VIDEO_STATE",
-              captions,
               title: videoTitle!,
               hasCaptions,
-              timeMs,
-            });
+            };
+            if (video) payload.timeMs = video.currentTime * 1000;
+            if (captions) payload.captions = captions;
+
+            messages.postToPanel(payload);
             sendResponse(true);
             return;
           }
           case "TOGGLE_SUBTITLES_ON":
-            postToInjected({ type: "TOGGLE_SUBTITLES_ON" });
+            messages.postToInjected({ type: "TOGGLE_SUBTITLES_ON" });
             break;
         }
       },

@@ -1,6 +1,5 @@
 import logger from "@/logger";
-import { postToPanel, postToTab } from "@/messages";
-import type { PanelMessage } from "@/messages";
+import * as messages from "@/messages";
 
 export default defineBackground(() => {
   logger.log("Content script loaded.");
@@ -38,14 +37,14 @@ export default defineBackground(() => {
         );
         if (watchTabs.length > 0) {
           await Promise.all(
-            watchTabs.map((t) => postToTab(t.id!, { type: "INIT" })),
+            watchTabs.map((t) => messages.postToTab(t.id!, { type: "INIT" })),
           );
         }
       } else {
-        await postToTab(tabIds[0], { type: "INIT" });
+        await messages.postToTab(tabIds[0], { type: "INIT" });
       }
     }
-    postToPanel({ type: "TAB_ACTIVATED", tabIds: [] });
+    messages.postToPanel({ type: "TAB_ACTIVATED", tabIds });
   }
 
   // Tab closing has two cases:
@@ -57,13 +56,13 @@ export default defineBackground(() => {
     } catch {}
   });
   browser.tabs.onRemoved.addListener(async (tabId, { windowId }) => {
-    postToPanel({ type: "TAB_REMOVED", tabId });
+    messages.postToPanel({ type: "TAB_REMOVED", tabId });
     activateYtTabs(windowId);
   });
 
   browser.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
     if (message.destination !== "background") return;
-    const msg = message as PanelMessage;
+    const msg = message as messages.PanelMessage;
 
     switch (msg.type) {
       case "SIDE_PANEL_OPEN":
@@ -73,7 +72,7 @@ export default defineBackground(() => {
       case "SEEK_VIDEO":
       case "TOGGLE_SUBTITLES_ON": {
         const { tabId, destination, ...payload } = msg;
-        postToTab(tabId, payload);
+        messages.postToTab(tabId, payload);
         break;
       }
     }
