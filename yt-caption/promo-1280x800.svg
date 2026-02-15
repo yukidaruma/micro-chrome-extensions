@@ -1,0 +1,131 @@
+<svg width="1280" height="800" viewBox="0 0 1280 800" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1280" height="800" fill="#f9fafb"/>
+
+  <!-- Browser-like frame -->
+  <g>
+    <!-- Browser window -->
+    <rect x="80" y="80" width="1120" height="520" rx="12" fill="#ffffff" stroke="#dee2e6" stroke-width="2"/>
+
+    <!-- Title bar -->
+    <rect x="80" y="80" width="1120" height="40" rx="12" fill="#e9ecef"/>
+    <rect x="80" y="108" width="1120" height="12" fill="#e9ecef"/>
+
+    <!-- Window controls (OS-neutral, right side) -->
+    <line x1="1130" y1="100" x2="1142" y2="100" stroke="#adb5bd" stroke-width="2" stroke-linecap="round"/>
+    <rect x="1154" y="93" width="12" height="12" rx="2" fill="none" stroke="#adb5bd" stroke-width="1.5"/>
+    <line x1="1178" y1="94" x2="1188" y2="106" stroke="#adb5bd" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="1188" y1="94" x2="1178" y2="106" stroke="#adb5bd" stroke-width="1.5" stroke-linecap="round"/>
+
+    <!-- Address bar -->
+    <rect x="110" y="88" width="400" height="24" rx="4" fill="#ffffff" stroke="#ced4da" stroke-width="1"/>
+    <text x="126" y="105" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#9ca3af">youtube.com/watch?v=...</text>
+  </g>
+
+  <!-- YouTube Player Area -->
+  <g>
+    <rect x="82" y="120" width="740" height="478" fill="#0f0f0f"/>
+
+    <!-- Video thumbnail area -->
+    <rect x="82" y="120" width="740" height="416" fill="#1a1a2e"/>
+
+    <!-- Simplified play button -->
+    <circle cx="452" cy="328" r="36" fill="rgba(0,0,0,0.5)"/>
+    <path d="M440 308 L440 348 L472 328 Z" fill="rgba(255,255,255,0.8)"/>
+
+    <!-- Video progress bar -->
+    <rect x="82" y="536" width="740" height="4" fill="#333"/>
+    <rect x="82" y="536" width="320" height="4" rx="0" fill="#ff0000"/>
+
+    <!-- Video controls bar -->
+    <rect x="82" y="540" width="740" height="58" fill="#0f0f0f"/>
+
+    <!-- Play/pause icon -->
+    <rect x="100" y="558" width="4" height="20" rx="1" fill="#fff"/>
+    <rect x="110" y="558" width="4" height="20" rx="1" fill="#fff"/>
+
+    <!-- Time text -->
+    <text x="130" y="573" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#aaa">3:24 / 10:15</text>
+
+    <!-- Caption text overlay on video -->
+    <rect x="252" y="490" width="400" height="36" rx="4" fill="rgba(0,0,0,0.75)"/>
+    <text x="452" y="514" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#ffffff">Then put the carrot right in the middle for the nose</text>
+  </g>
+
+  <!-- Divider between player and panel -->
+  <line x1="822" y1="120" x2="822" y2="598" stroke="#dee2e6" stroke-width="2"/>
+
+  <!-- Side Panel -->
+  <g>
+    <!-- Panel background -->
+    <rect x="822" y="120" width="378" height="478" fill="#ffffff"/>
+
+    <!-- Panel header -->
+    <rect x="822" y="120" width="378" height="48" fill="#f9fafb"/>
+    <line x1="822" y1="168" x2="1200" y2="168" stroke="#e5e7eb" stroke-width="1"/>
+
+    <!-- Video title in header -->
+    <text x="842" y="149" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="#111827">How to build a snowman</text>
+
+    <!-- Caption 1 -->
+    <g>
+      <text x="842" y="205" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#9ca3af">2:41</text>
+      <text x="880" y="205" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#111827">...</text>
+    </g>
+
+    <!-- Caption 2 -->
+    <g>
+      <text x="842" y="251" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#9ca3af">2:58</text>
+      <text x="880" y="251" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#111827">...</text>
+    </g>
+
+    <!-- Caption 3 -->
+    <g>
+      <text x="842" y="297" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#9ca3af">3:12</text>
+      <text x="880" y="297" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#111827">Now grab some small coal</text>
+      <text x="880" y="315" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#111827">for the eyes and mouth</text>
+    </g>
+
+    <!-- Caption 4 (ACTIVE - highlighted) -->
+    <g>
+      <rect x="830" y="331" width="362" height="52" rx="6" fill="#fef9c2"/>
+      <text x="842" y="351" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#9ca3af">3:24</text>
+      <text x="880" y="351" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#111827">Then put the carrot right in</text>
+      <text x="880" y="369" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#111827">the middle for the nose</text>
+    </g>
+
+    <!-- Caption 5 -->
+    <g>
+      <text x="842" y="405" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#9ca3af">3:38</text>
+      <text x="880" y="405" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#111827">And finally just add some sticks</text>
+      <text x="880" y="423" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#111827">on each side for the arms</text>
+    </g>
+
+    <!-- Caption 6 -->
+    <g>
+      <text x="842" y="451" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#9ca3af">4:02</text>
+      <text x="880" y="451" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#111827">...</text>
+    </g>
+
+    <!-- Caption 7 -->
+    <g>
+      <text x="842" y="497" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#9ca3af">4:18</text>
+      <text x="880" y="497" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#111827">...</text>
+    </g>
+
+    <!-- Caption 8 (faded at bottom) -->
+    <g>
+      <text x="842" y="543" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#9ca3af">4:35</text>
+      <text x="880" y="543" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#111827">...</text>
+    </g>
+
+    <!-- Scrollbar (thumb only) -->
+    <rect x="1194" y="280" width="4" height="60" rx="2" fill="#d1d5db"/>
+  </g>
+
+  <!-- Extension name at bottom -->
+  <text x="640" y="660" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="48" font-weight="700" fill="#111827">YT Caption Panel</text>
+
+  <!-- Tagline -->
+  <text x="640" y="720" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" fill="#9ca3af">Browse Captions in a Side Panel · Click to Seek · Copy/Search Captions</text>
+</svg>
