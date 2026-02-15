@@ -14,6 +14,7 @@ export default defineConfig({
   ],
   manifest: {
     name: "YT Caption Panel",
+    description: "View, search, and navigate YouTube captions in side panel.",
     permissions: ["sidePanel", "tabs"],
     web_accessible_resources: [
       {

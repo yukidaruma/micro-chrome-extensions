@@ -5,7 +5,7 @@ export default defineBackground(() => {
   logger.log("Content script loaded.");
 
   /**
-   * Query YouTube tabs in a window, restore the best ones, and notify the panel.
+   * Query YouTube tabs in windows, restore the best ones, and notify the panel.
    * @param restoreAll - Restore all /watch tabs so they sync state to the panel.
    */
   async function activateYtTabs(restoreState = false) {

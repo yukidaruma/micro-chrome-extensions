@@ -5,7 +5,7 @@
 <a href="https://chromewebstore.google.com/detail/eakinflfejmldnjfbdmoehpcfpedaepc"><img src="https://img.shields.io/chrome-web-store/v/eakinflfejmldnjfbdmoehpcfpedaepc?style=flat-square&color=%234285f4&label=Version&logo=google-chrome&logoColor=white" alt="Version"></a>
 <a href="https://chromewebstore.google.com/detail/eakinflfejmldnjfbdmoehpcfpedaepc"><img src="https://img.shields.io/chrome-web-store/users/eakinflfejmldnjfbdmoehpcfpedaepc?style=flat-square&color=%234285f4&label=Users&logo=googlechrome&logoColor=white" alt="Users"></a>
 
-View, search, and navigate YouTube captions in a side panel.
+View, search, and navigate YouTube captions in side panel.
 
 ## Usage
 
